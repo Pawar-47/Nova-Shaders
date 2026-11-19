@@ -12,7 +12,7 @@ Shader limits remain explicit: GLSL can shade, tint, animate and slightly deform
 ## Visual goals
 
 - Water: tinted/translucent body, subdued shallow bottom, stronger depth absorption, restrained reflections and subtle surface motion.
-- Foliage: preserve biome tint; add restrained variation, backlighting and natural, non-synchronous motion using existing vertices only.
+- Foliage: preserve biome tint; add restrained variation, backlighting and natural, non-synchronous motion using existing vertices only. Leaves and ground plants must use separate motion paths because their vanilla vertex topology differs.
 - Clouds: broad, asymmetric masses across overhead and horizon views, without a costly volumetric march.
 - Performance: target Intel HD Graphics 5500 first. Avoid making SSR, SSAO, bloom, TAA or multi-ray volumetrics default requirements.
 
@@ -22,14 +22,14 @@ Shader limits remain explicit: GLSL can shade, tint, animate and slightly deform
 |---|---|---|---|
 | [Spudlight Shaders](https://modrinth.com/shader/spudlight-shaders) | MIT; fork of Mellow with upstream permission noted | Explicit low-end budget: 512px shadows, 64-block range, vertex-stage foliage/water animation, and no SSAO, bloom, SSR or volumetric clouds in its low-end profile. | Study the public source and preserve upstream attribution if any code is adapted. Do not assume its forked code is wholly original to Spudlight. |
 | [LIGHT Shaders](https://modrinth.com/shader/light-shaders) | Chocapic13 sharing/modification rules | Shows how removing expensive features can retain water reflections/ripples, dynamic-weather response and moving clouds. | Follow the linked Chocapic13 rules; do not copy until the exact permitted reuse and required notices are checked. |
-| [Googy Shaders](https://modrinth.com/mod/googy-shaders) | CC BY 4.0; older Minecraft versions | Per-vertex noise gives different parts of foliage different phases, avoiding one rigid synchronized sway. | Algorithm reference. If adapting code, include attribution and license terms; first verify Iris 1.8 compatibility. |
+| [Googy Shaders](https://modrinth.com/mod/googy-shaders) | CC BY 4.0; older Minecraft versions | Per-vertex noise gives different parts of foliage different phases, avoiding one rigid synchronized sway. | Algorithm reference only. Nova's new leaf wind is an independent implementation; no Googy source was copied. |
 | [UltraLight Shaders](https://modrinth.com/shader/ultralightshader) | ARR; do not copy source | Useful design notes: every effect has a cheap path, depth-faded water opacity, distance falloff for water detail, and a clear performance cut order. | Design reference only; all-rights-reserved source is not reusable. |
 | [RMC Shaders](https://modrinth.com/shader/rmc-shaders) | Apache-2.0 | A compact GLSL 120 compatibility strategy, procedural clouds and simple wave/reflection features. | Potential code reference after checking exact source files and compatibility; preserve Apache notices if adapted. |
 
 ## GitHub and Iris references
 
 - [Iris shaderpack template](https://github.com/ascpixi/minecraft-shader-template): use as a minimal project-layout and entry-point reference.
-- [Iris shader documentation](https://github.com/IrisShaders/docs): authoritative reference for shader stages, uniforms, attributes, program naming and pack compatibility.
+- [Iris shader documentation](https://github.com/IrisShaders/docs): authoritative reference for shader stages, uniforms, attributes, program naming and pack compatibility. Iris documents `mc_Entity` as the block ID from `block.properties`; `mc_midTexCoord` is a `vec2` containing the current quad's texture midpoint and is valid in terrain and shadow vertex programs. See [mc_Entity](https://github.com/IrisShaders/docs/blob/26.1/docs/reference/attributes/mc_Entity.md) and [mc_midTexCoord](https://shaders.properties/current/reference/attributes/mc_midtexcoord/).
 - [MakeUp Ultra Fast](https://github.com/javiergcim/MakeUpUltraFast): LGPL-3.0; useful architecture and low-end feature budgeting, but any source adaptation must comply with LGPL.
 - [Glimmer](https://github.com/jbritain/glimmer-shaders): MIT; already used for Nova's compact directional water-wave slope and Beer–Lambert water attenuation.
 - [Spectrum](https://github.com/zombye/spectrum): MIT; already used for Nova's height-profiled cloud density and compact anisotropic phase term. Its heavy 3D textures and multi-ray march are not ported.
@@ -40,7 +40,7 @@ Shader limits remain explicit: GLSL can shade, tint, animate and slightly deform
 - One compact forward pipeline, one shadow map, a small cloud ray march and two full-screen passes.
 - Default shadow map 512px over 64 blocks; PERFORMANCE disables the shadow pass and FXAA.
 - Water uses shared analytic vertex displacement and fragment slope, depth-derived Beer–Lambert tint, and a minimum horizontal blend opacity.
-- Foliage uses biome-preserving colour variation, sunset-aware backlighting and a shared terrain/shadow wind field.
+- Ground plants use a sprite-midpoint hinge; leaf blocks use a separate ID and a continuous world-space vertex field with slow canopy sway plus tiny per-vertex flutter. The leaf field fades out by 96 blocks and is shared exactly with the shadow pass. Both paths preserve vanilla geometry and add no vertices.
 - Clouds use four samples by default (three in the lightest profile), a height-shaped density field and a broad horizon LOD.
 - No SSAO, bloom, screen-space reflections or multi-ray volumetrics are required by default.
 
@@ -56,7 +56,7 @@ Shader limits remain explicit: GLSL can shade, tint, animate and slightly deform
 
 ## Next implementation order
 
-1. Audit and refine shader-only foliage animation: natural phase variation, restrained gusts, stable world-space motion, distance fade and shadow parity.
+1. Audit and refine shader-only foliage animation: natural phase variation, restrained gusts, stable world-space motion, distance fade and shadow parity. Confirm the leaf block-ID tags on Iris 1.8.x and watch for cracks or visible canopy shearing in-game.
 2. Review water detail and depth response against the low-end design: avoid costly extra texture fetches and unnecessary wave work at distance.
 3. Improve cloud distribution and shading within the existing fixed sample budget before considering any extra samples.
 4. Add a real shader-preprocessing/GLSL validation stage if it can reproduce the Iris 1.8.x compatibility environment.
