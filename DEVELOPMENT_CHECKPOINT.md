@@ -39,6 +39,7 @@ Confirmed by reading the sources, not by rendering:
 - Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained.
 - Foliage shading now adds low-amplitude warm/cool patch variation and sunset-aware backlighting while retaining the original biome tint. Grass-block tops receive variation without vertex displacement. Vertical faces preserve their texture alpha rather than inheriting the horizontal-sheet opacity floor.
 - Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
+- Added a `PERFORMANCE` preset that sets `SHADOWS=0`, disables Iris's actual shadow render pass through conditional `shadow.enabled`, disables FXAA and keeps three cloud samples plus water effects. The shader checker asserts this path.
 - The target OS is Linux Mint, not Windows.
 
 No shader compile, in-game visual check or FPS benchmark has been performed for these changes. The denser overhead cloud field and 0.82 water floor are source changes only; compare the actual cloud count/distribution and shallow/deep water in-game before calling them visually complete.
