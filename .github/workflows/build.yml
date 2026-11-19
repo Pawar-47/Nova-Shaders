@@ -63,15 +63,18 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.10.1
+          ## Nova Shaders 0.10.2
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
-          The target is an Intel Core i3-5005U with Intel HD Graphics 5500, but appearance and
+          The target is an Intel Core i3-5005U with Intel HD Graphics 5500 on Linux Mint, but appearance and
           performance have not been verified on that hardware. MIT-licensed adaptations from
           Glimmer and Spectrum are documented in THIRD-PARTY-NOTICES.txt.
 
           ### Highlights
 
+          - Cloud sampling now favours fewer, larger, asymmetric masses distributed across the sky, while retaining the four-step low-cost march and horizon stability.
+          - Horizontal water retains at least 72% opacity and increases opacity with depth, avoiding a clear-glass appearance.
+          - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
           - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
             plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
             bends the cast shadow by the identical weight.
