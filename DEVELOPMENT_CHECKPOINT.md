@@ -1,6 +1,6 @@
 # Nova Shaders Development Checkpoint
 
-Last updated: 0.10.1 commit (vegetation bending plus audit notes)
+Last updated: 0.10.2 branch (natural cloud and water refinements; visual verification pending)
 
 ## Project and target
 
@@ -32,7 +32,7 @@ Confirmed by reading the sources, not by rendering:
 
 ## What 0.10.2 changes (unverified)
 
-- Cloud field frequency is reduced and the domain is stretched/skewed to favour larger, fewer, irregular masses across the sky; the four-step march and horizon LOD remain in place.
+- Cloud field frequency is reduced further and the domain is stretched/skewed to favour roughly 15–20 broad, irregular masses in a typical open-sky view; the four-step march and horizon LOD remain in place. Exact count varies with view and coverage.
 - Horizontal water alpha has a 0.72 floor, with depth-driven opacity retained.
 - Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
 - The target OS is Linux Mint, not Windows.
