@@ -197,14 +197,14 @@ done
 
 section "water opacity and cloud shape"
 
-if ! grep -qF 'float depthAlpha = max(0.72, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
+if ! grep -qF 'float depthAlpha = max(0.82, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
     fail "horizontal water must retain a tinted translucent body instead of becoming clear"
 fi
 
 section "cloud horizon stability"
 
 sky="$shaders/lib/sky.glsl"
-if ! grep -qF 'float fieldScale = mix(0.0030, 0.0010, horizonLod);' "$sky" ||
+if ! grep -qF 'float fieldScale = mix(0.0060, 0.0012, horizonLod);' "$sky" ||
    ! grep -qF 'worldXZ.y * 0.78 - worldXZ.x * 0.11' "$sky"; then
     fail "cloud field must use broad, asymmetric cloud masses across the sky"
 fi
