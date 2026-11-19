@@ -63,7 +63,7 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.10.3
+          ## Nova Shaders 0.10.4
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
           The target is an Intel Core i3-5005U with Intel HD Graphics 5500 on Linux Mint, but appearance and
