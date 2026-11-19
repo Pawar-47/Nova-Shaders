@@ -1,0 +1,6 @@
+{
+  "parent": "nova:block/natural_plant_tinted",
+  "textures": {
+    "cross": "minecraft:block/short_grass"
+  }
+}
