@@ -135,8 +135,8 @@ That is not the same as running it. No frame times are claimed anywhere in this 
 If something fails to compile, the Iris shader log (`logs/latest.log`) names the file and
 line; please report it.
 
-Worth testing first: shadow edges and acne, water from above and below, the cloud sheet at
-the horizon, rain, and the Nether.
+Worth testing first: shadow edges and acne, water close up and at a distance, the scattered
+clouds at dawn and dusk, rain, and the Nether.
 
 ## Repository layout
 
