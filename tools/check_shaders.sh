@@ -245,6 +245,10 @@ fi
 if ! grep -qF 'float horizonMass = valueNoise(horizonXZ * fieldScale + wind);' "$sky"; then
     fail "horizon LOD must use the same asymmetric cloud domain as the main samples"
 fi
+if ! grep -qF 'if (horizonLod < 0.999)' "$sky" ||
+   ! grep -qF 'detail = valueNoise(horizonXZ * detailScale + wind);' "$sky"; then
+    fail "cloud detail noise must be skipped when the horizon LOD fades its contribution to zero"
+fi
 
 if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" ||
    ! grep -qF 'mass = mix(mass, horizonMass, horizonBlend);' "$sky"; then
