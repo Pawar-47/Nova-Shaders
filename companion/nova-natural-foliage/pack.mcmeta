@@ -1,0 +1,10 @@
+{
+  "pack": {
+    "pack_format": 55,
+    "supported_formats": {
+      "min_inclusive": 55,
+      "max_inclusive": 255
+    },
+    "description": "Nova Natural Foliage Lite — optional bushier vanilla leaves"
+  }
+}

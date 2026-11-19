@@ -164,6 +164,10 @@ if ! grep -qF 'if (vVegetationBlock > 100.5)' "$shaders/lib/body/opaque.fsh" ||
    ! grep -qF 'if (vVegetationBlock > 101.5)' "$shaders/lib/body/opaque.fsh"; then
     fail "terrain shading does not distinguish vegetation from grass-block ID 102"
 fi
+if ! grep -qF 'vec3 foliageTint = mix(vec3(0.96, 1.03, 0.94),' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'vec3 transmissionTint = mix(vec3(0.025, 0.10, 0.015),' "$shaders/lib/body/opaque.fsh"; then
+    fail "foliage shading must preserve biome colour while adding subtle natural variation and backlight"
+fi
 if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/water.glsl" ||
    ! grep -qF 'float novaWaterSurfaceHeight(vec2 worldXZ)' "$shaders/lib/water_waves.glsl" ||
@@ -195,15 +199,41 @@ for entry in gbuffers_terrain.vsh gbuffers_terrain.fsh shadow.vsh; do
     fi
 done
 
+section "integrated GPU performance profile"
+
+if ! grep -qF '#if SHADOWS == 0' "$shaders/shaders.properties" ||
+   ! grep -qF 'shadow.enabled = false' "$shaders/shaders.properties" ||
+   ! grep -qF 'profile.PERFORMANCE =' "$shaders/shaders.properties" ||
+   ! grep -qF 'SHADOWS=0' "$shaders/shaders.properties" ||
+   ! grep -qF 'profile.PERFORMANCE=Performance' "$lang"; then
+    fail "PERFORMANCE profile must disable the Iris shadow pass and have a visible label"
+fi
+
+section "water opacity and cloud shape"
+
+if ! grep -qF 'float depthAlpha = max(0.82, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
+    fail "horizontal water must retain a tinted translucent body instead of becoming clear"
+fi
+if ! grep -qF 'alpha = clamp(mix(albedo.a, depthAlpha, sheet), 0.0, 0.97);' "$shaders/lib/body/water.fsh"; then
+    fail "stronger water opacity must be restricted to horizontal sheets; vertical faces retain texture alpha"
+fi
+
 section "cloud horizon stability"
 
 sky="$shaders/lib/sky.glsl"
+if ! grep -qF 'float fieldScale = mix(0.0140, 0.0012, horizonLod);' "$sky" ||
+   ! grep -qF 'worldXZ.y * 0.78 - worldXZ.x * 0.11' "$sky"; then
+    fail "cloud field must use broad, asymmetric cloud masses across the sky"
+fi
+if ! grep -qF 'float horizonMass = valueNoise(horizonXZ * fieldScale + wind);' "$sky"; then
+    fail "horizon LOD must use the same asymmetric cloud domain as the main samples"
+fi
+
 if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" ||
    ! grep -qF 'mass = mix(mass, horizonMass, horizonBlend);' "$sky"; then
     fail "cloud march does not blend to a stable low-frequency horizon field"
 fi
-if ! grep -qF 'float horizonMass = valueNoise(midPoint * fieldScale + wind);' "$sky" ||
-   ! grep -qF '1.0 - horizonLod, horizonMass, horizonLod' "$sky"; then
+if ! grep -qF '1.0 - horizonLod, horizonMass, horizonLod' "$sky"; then
     fail "cloud horizon density is not shared across the ray-march samples"
 fi
 if ! grep -qF 'float opticalDepthLimit = mix(8.0, 0.90, horizonLod);' "$sky" ||

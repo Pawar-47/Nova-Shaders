@@ -4,12 +4,28 @@ A small, original shader pack for **Minecraft Java 1.21.5** running **Iris 1.8.x
 **Sodium**, on a Fabric install.
 
 The target system is an Intel Core i3-5005U @ 2.00 GHz with Intel HD Graphics 5500 on
-Windows. The pack stays on a compact forward pipeline, one shadow map, a small cloud ray
+Linux Mint. The pack stays on a compact forward pipeline, one shadow map, a small cloud ray
 march and two full-screen passes. It has not been benchmarked on this hardware, so no FPS or
-performance guarantee is claimed; start with the POTATO preset and adjust from there.
+performance guarantee is claimed; start with DEFAULT for balanced visuals, POTATO for a lighter
+cloud/shadow workload, or PERFORMANCE when FPS matters more than dynamic shadows and FXAA.
 
-Version **0.10.1**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.2**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+An optional **Nova Natural Foliage Lite** companion resource pack is built separately
+from the shader ZIP. It adds a single randomized angled leaf plane to vanilla leaf
+blocks, three-plane small grass/shrub models and a small grass-block side fringe to soften cube-shaped canopies and turf edges.
+It is experimental, adds geometry/overdraw, and should only be enabled if forest-scene
+FPS remains acceptable. It does not alter tree generation, branch placement, tall-grass/large-fern models or biome vegetation density.
+
+## What changed in 0.10.2
+
+- **Clouds are larger, fewer and less uniform.** The procedural field is stretched and skewed, with a moderate near-view field scale (0.014) to break the overhead sky into separate broad masses, plus a restrained detail field (0.050) to roughen their edges. Both fade to a much broader field near the horizon, with no extra ray-march samples. The target is roughly 15–20 broad, irregular cloud masses in a typical overhead open-sky view, distributed across the whole sky rather than clustered at the horizon; the exact visible count varies with view direction and the coverage setting. The horizon LOD remains bounded for the four-step low-cost march.
+- **Water is less see-through.** Horizontal water now keeps at least 82% blend opacity, rising with depth, so the bottom remains visible through a tinted body instead of looking like clear glass. Vertical water faces retain their texture translucency.
+- **Foliage shading is less uniform.** Leaves and plants receive restrained warm/cool patch variation and a sunset-aware backlight while the original biome tint remains dominant. Grass-block top faces receive the same variation without moving the block geometry.
+- **Target defaults are lighter.** The default shadow map is reduced from 1024 to 512 and shadow distance from 96 to 64 blocks for the Intel HD 5500 target. The 1024 option remains available for sharper shadows. A new PERFORMANCE preset disables the actual Iris shadow render pass and FXAA, while keeping clouds and water enabled.
+
+These are source-level adjustments. Cloud count, water appearance and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit.
 
 ## What changed in 0.10.1
 

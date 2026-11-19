@@ -132,21 +132,25 @@ vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
  * by the top only the tallest peaks survive, so the crowns break into separate
  * rounded puffs. The union of those silhouettes is what reads as fluffy.
  *
- * There is no domain warping. Warping a noise field every frame is exactly what
- * makes clouds shear, swim and look distorted.
+ * A fixed anisotropic transform stretches the cloud islands into broad, uneven
+ * masses without animated domain warping, which would make them shear and swim.
  */
 float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind,
                          float fieldScale, float detailAmount,
                          float horizonMass, float horizonBlend) {
     // Near the horizon, broaden and stabilize the field across the short march.
-    vec2 p = worldXZ * fieldScale + wind;
+    // Stretch and skew the domain so cloud islands are broad and irregular,
+    // rather than round, evenly spaced cartoon puffs.
+    vec2 cloudXZ = vec2(worldXZ.x + worldXZ.y * 0.18,
+                        worldXZ.y * 0.78 - worldXZ.x * 0.11);
+    vec2 p = cloudXZ * fieldScale + wind;
     float mass = valueNoise(p);
     mass = mix(mass, horizonMass, horizonBlend);
 
     // A weak detail field rags the edges only while the ray has enough samples.
     mass += (detail - 0.5) * 0.10 * detailAmount;
 
-    float threshold = mix(0.62, 0.38, saturate(CLOUD_COVERAGE)) + smoothstep(0.18, 1.0, g) * 0.30;
+    float threshold = mix(0.78, 0.55, saturate(CLOUD_COVERAGE)) + smoothstep(0.18, 1.0, g) * 0.26;
     float density = saturate((mass - threshold) * 1.8);
 
     // Keep a soft shelf at the base and erode the top into rounded crowns. The
@@ -227,14 +231,16 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     // The horizon intersects thousands of blocks of cloud slab. Fade to a broad,
     // low-frequency field before the fixed sample budget can turn it into dots.
     float horizonLod = smoothstep(30.0, 150.0, stepLength);
-    float fieldScale = mix(0.0143, 0.00055, horizonLod);
-    float detailScale = mix(0.0600, 0.0006, horizonLod);
+    float fieldScale = mix(0.0140, 0.0012, horizonLod);
+    float detailScale = mix(0.0500, 0.0010, horizonLod);
 
     // The fine detail is sampled once, midway; it only has to rag the threshold, it
     // does not have to travel with every step.
     vec2 midPoint = cameraPosition.xz + direction.xz * (tNear + tFar) * 0.5;
-    float horizonMass = valueNoise(midPoint * fieldScale + wind);
-    float detail = valueNoise(midPoint * detailScale + wind);
+    vec2 horizonXZ = vec2(midPoint.x + midPoint.y * 0.18,
+                          midPoint.y * 0.78 - midPoint.x * 0.11);
+    float horizonMass = valueNoise(horizonXZ * fieldScale + wind);
+    float detail = valueNoise(horizonXZ * detailScale + wind);
 
     // Ordered dither helps hide march bands in the body, but is suppressed at the horizon.
     float jitter = novaDither(gl_FragCoord.xy) * (1.0 - horizonLod);
