@@ -7,6 +7,7 @@ An optional, low-overhead companion resource pack for Nova Shaders.
 - Adds one thin, slightly angled leaf-textured plane to each vanilla leaf block model, extending just beyond the cube silhouette.
 - Randomizes the plane's horizontal orientation per leaf block, breaking up the repeated square canopy outline.
 - Adds a 4-pixel grass fringe above the sides of grass blocks, softening the hard grass-to-dirt edge.
+- Rebuilds short grass, fern, seagrass, dead bush, bush, short/tall dry grass and Nether sprouts with three crossed planes instead of the vanilla two-plane cross, making small plants and shrubs read fuller from more angles.
 - Keeps vanilla textures and biome tint indices, so ordinary texture packs that replace vanilla leaf and grass-block textures remain usable.
 - Leaves the original leaf cube in place for canopy volume and block culling.
 
@@ -14,9 +15,9 @@ Supported vanilla leaf blocks: oak, spruce, birch, jungle, acacia, dark oak, man
 
 ## Performance and limitations
 
-This is deliberately a **Lite** treatment: one extra double-sided plane per leaf block, plus a small grass-block edge overlay. It is not a dense multi-layer leaf model. The added geometry and overdraw must be benchmarked on the Intel HD Graphics 5500 before being recommended as a default. Disable this pack if forest or grassland scenes lose too much FPS.
+This is deliberately a **Lite** treatment: one extra double-sided plane per leaf block, a third plane for selected plants, plus a small grass-block edge overlay. It is not a dense multi-layer leaf model. The added geometry and overdraw must be benchmarked on the Intel HD Graphics 5500 before being recommended as a default. Disable this pack if forest or grassland scenes lose too much FPS.
 
-It changes leaf block models and grass-block edges only. It does not change tree generation, branch placement, tall-grass/shrub models or biome vegetation density. The Nova shader remains usable without this pack.
+It changes leaf block models, selected small-plant/shrub models and grass-block edges only. It does not change tree generation, branch placement, tall-grass/large-fern models or biome vegetation density. The Nova shader remains usable without this pack.
 
 ## Installation
 
