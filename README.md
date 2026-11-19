@@ -19,6 +19,7 @@ Nova is distributed as a single shader pack. All visual work—including water, 
 - The release is now shader-only: CI builds and publishes one Iris shader ZIP. Companion resource-pack sources, validation and packaging are excluded.
 - Leaves now have a separate shader material ID and a low-amplitude, continuous world-space vertex wind field. A slow canopy sway is layered with tiny per-vertex flutter; motion fades with distance and the same displacement is applied in the shadow pass.
 - Ground plants retain their sprite-midpoint hinge, separate from leaf-block motion. This is shader-only and does not add geometry or change vanilla models.
+- High-frequency water ripple noise is now skipped entirely beyond its 72-block detail range; the cheaper analytic wave slope remains.
 - Continued focus is on lightweight water and cloud improvements. Vanilla block geometry and world generation remain outside the shader's control.
 
 This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
