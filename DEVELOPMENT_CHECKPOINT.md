@@ -15,7 +15,8 @@ Last updated: 0.10.2 branch (natural cloud and water refinements; visual verific
 - Repository: `https://github.com/Pawar-47/Nova-Shaders.git`.
 - `main` was at `a7bf008` (v0.10.1) when this work started. Active work branch: `natural-visuals-0.10.2`; pull request: `https://github.com/Pawar-47/Nova-Shaders/pull/1`.
 - v0.10.2 is proposed on the PR branch and is not yet merged or released. The PR workflow run `44612327841` completed successfully: static shader checks, packaging and artifact upload passed. The release step was correctly skipped because this is a pull request.
-- The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No new third-party code was copied; Glimmer and Spectrum remain the only documented source adaptations.
+- The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No new third-party shader source or resource-pack model code was copied; Glimmer and Spectrum remain the only shader source adaptations.
+- Added `companion/nova-natural-foliage/`, an original optional MIT resource pack with one randomized angled plane per vanilla leaf block. It is packaged separately from the shader ZIP and validated by `tools/check_foliage_pack.py`. Geometry cost and compatibility are not yet benchmarked.
 
 
 ## Audit: why the pack still reads as basic
@@ -57,5 +58,5 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 ## Next actions
 
 1. Install the PR build on Linux Mint and get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
-3. Continue the optional foliage companion pack using only MIT-cleared assets/models after compatibility and model-cost checks; see `VISUAL-RESEARCH.md`.
+3. Test the optional `Nova Natural Foliage Lite` companion pack against vanilla leaves and common texture packs; benchmark forest FPS before recommending it. It adds one extra plane per leaf block and may increase overdraw.
 4. Do not merge or claim visual success until the shader has been loaded in Iris on the target Linux Mint machine. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.
