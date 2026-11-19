@@ -237,7 +237,9 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     // The fine detail is sampled once, midway; it only has to rag the threshold, it
     // does not have to travel with every step.
     vec2 midPoint = cameraPosition.xz + direction.xz * (tNear + tFar) * 0.5;
-    vec2 horizonXZ = vec2(midPoint.x + midPoint.y * 0.18,\n                          midPoint.y * 0.78 - midPoint.x * 0.11);\n    float horizonMass = valueNoise(horizonXZ * fieldScale + wind);
+    vec2 horizonXZ = vec2(midPoint.x + midPoint.y * 0.18,
+                          midPoint.y * 0.78 - midPoint.x * 0.11);
+    float horizonMass = valueNoise(horizonXZ * fieldScale + wind);
     float detail = valueNoise(midPoint * detailScale + wind);
 
     // Ordered dither helps hide march bands in the body, but is suppressed at the horizon.
