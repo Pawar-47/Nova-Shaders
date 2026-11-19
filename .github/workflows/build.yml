@@ -72,8 +72,8 @@ jobs:
 
           ### Highlights
 
-          - Cloud sampling now targets roughly 15–20 larger, asymmetric masses across a typical open-sky view, retaining the four-step low-cost march and horizon stability.
-          - Horizontal water retains at least 72% opacity and increases opacity with depth, avoiding a clear-glass appearance.
+          - Cloud sampling uses a larger near-view field scale to avoid a uniform overhead patch, then fades to a broader field near the horizon; the target is roughly 15–20 asymmetric masses across a typical open-sky view.
+          - Horizontal water retains at least 82% opacity and increases opacity with depth, avoiding a clear-glass appearance.
           - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
           - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
             plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
