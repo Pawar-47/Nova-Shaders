@@ -17,7 +17,7 @@ Last updated: 0.10.2 branch (cloud/water refinements and companion-pack CI; visu
 - v0.10.2 is proposed on the PR branch and is not yet merged or released. The PR workflow run `44612327841` completed successfully: static shader checks, packaging and artifact upload passed. The release step was correctly skipped because this is a pull request.
 - The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No new third-party shader source or resource-pack model code was copied; Glimmer and Spectrum remain the only shader source adaptations.
 - Added `companion/nova-natural-foliage/`, an original optional MIT resource pack with one randomized angled plane per vanilla leaf block plus a grass-block side fringe. It is packaged as a separate ZIP, validated by `tools/check_foliage_pack.py`, and attached separately to CI artifacts and GitHub releases. Geometry cost and compatibility are not yet benchmarked. The pack does not change tall-grass or shrub models.
-- The latest confirmed successful PR workflow run is `44614644080` (commit `94132d5`): shader source checks, companion-pack validation, both ZIP builds and artifact uploads passed. The duplicate companion check briefly added to `check_shaders.sh` was removed; the dedicated `tools/check_foliage_pack.py` remains the single companion validator. No GLSL compilation or Minecraft rendering occurred.
+- The latest confirmed successful PR workflow run is `44614922673` (commit `eb1a580`): shader source checks, companion-pack validation, both ZIP builds and both artifact uploads passed. The duplicate companion check briefly added to `check_shaders.sh` was removed; the dedicated `tools/check_foliage_pack.py` remains the single companion validator. No GLSL compilation or Minecraft rendering occurred.
 
 
 ## Audit: why the pack still reads as basic
@@ -36,7 +36,7 @@ Confirmed by reading the sources, not by rendering:
 ## What 0.10.2 changes (unverified)
 
 - Cloud field uses a larger near-view sampling scale (0.006) so overhead views are not reduced to one uniform patch, then fades to a broader 0.0012 field near the horizon. The target is roughly 15–20 broad, asymmetric masses in a typical open-sky view; exact count varies with view and coverage. The four-step march remains in place.
-- Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained.
+- Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained. Vertical faces preserve their texture alpha rather than inheriting the horizontal-sheet opacity floor.
 - Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
 - The target OS is Linux Mint, not Windows.
 
