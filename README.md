@@ -11,6 +11,12 @@ performance guarantee is claimed; start with the POTATO preset and adjust from t
 Version **0.10.2**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
 
+An optional **Nova Natural Foliage Lite** companion resource pack is built separately
+from the shader ZIP. It adds a single randomized angled leaf plane to vanilla leaf
+blocks to soften cube-shaped canopies. It is experimental, adds geometry/overdraw, and
+should only be enabled if forest-scene FPS remains acceptable. It does not alter tree
+generation or grass/shrub block models.
+
 ## What changed in 0.10.2
 
 - **Clouds are larger, fewer and less uniform.** The procedural field is stretched and skewed, with a larger near-view sampling scale so overhead views do not collapse into one uniform patch, then a broader field near the horizon to avoid undersampling. The target is roughly 15–20 broad, irregular cloud masses in a typical open-sky view, distributed across the whole sky rather than clustered at the horizon; the exact visible count varies with view direction and the coverage setting. The horizon LOD remains bounded for the four-step low-cost march.
