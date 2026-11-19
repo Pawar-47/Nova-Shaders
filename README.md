@@ -12,17 +12,14 @@ cloud/shadow workload, or PERFORMANCE when FPS matters more than dynamic shadows
 Version **0.10.3**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
 
-An optional **Nova Natural Foliage Lite** companion resource pack is built separately
-from the shader ZIP. It adds a single randomized angled leaf plane to vanilla leaf
-blocks, three-plane small grass/shrub models and a small grass-block side fringe to soften cube-shaped canopies and turf edges.
-It is experimental, adds geometry/overdraw, and should only be enabled if forest-scene
-FPS remains acceptable. It does not alter tree generation, branch placement, tall-grass/large-fern models or biome vegetation density.
+Nova is distributed as a single shader pack. All visual work—including water, sky, clouds, foliage shading and vegetation animation—must be implemented inside the shader pack; no companion resource pack is part of the project or release pipeline. Shader code can animate and shade vanilla geometry, but it cannot replace block models or change tree generation.
 
 ## What changed in 0.10.3
 
-- **Minecraft 1.21.5 foliage compatibility fix.** The three-plane plant models now use rotation angles that are multiples of 22.5 degrees, as required by the 1.21.5 model format. The foliage validator now rejects unsupported angles so the issue cannot silently return.
+- The release is now shader-only: CI builds and publishes one Iris shader ZIP. Companion resource-pack sources, validation and packaging are excluded.
+- Continued focus is on natural-looking foliage through shader-side shading and vertex animation, plus lightweight water and cloud improvements. Vanilla block geometry and world generation remain outside the shader's control.
 
-The previous v0.10.2 shader and foliage improvements are retained. This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
+This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
 
 ## What changed in 0.10.2
 
