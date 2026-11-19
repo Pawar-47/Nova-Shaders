@@ -36,7 +36,8 @@ Confirmed by reading the sources, not by rendering:
 ## What 0.10.2 changes (unverified)
 
 - Cloud field uses a larger near-view sampling scale (0.006) so overhead views are not reduced to one uniform patch, then fades to a broader 0.0012 field near the horizon. The target is roughly 15–20 broad, asymmetric masses in a typical open-sky view; exact count varies with view and coverage. The four-step march remains in place.
-- Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained. Vertical faces preserve their texture alpha rather than inheriting the horizontal-sheet opacity floor.
+- Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained.
+- Foliage shading now adds low-amplitude warm/cool patch variation and sunset-aware backlighting while retaining the original biome tint. Grass-block tops receive variation without vertex displacement. Vertical faces preserve their texture alpha rather than inheriting the horizontal-sheet opacity floor.
 - Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
 - The target OS is Linux Mint, not Windows.
 
