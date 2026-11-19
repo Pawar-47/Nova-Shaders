@@ -31,13 +31,16 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 ## Research reviewed on 2026-11-20
 
 - Modrinth: Spudlight (MIT / fork attribution), LIGHT (Chocapic13 rules), Googy (CC BY 4.0), UltraLight (ARR; reference only), RMC (Apache-2.0).
-- GitHub: Iris shader template and documentation, MakeUp Ultra Fast (LGPL-3.0), Glimmer (MIT), Spectrum (MIT), opengl_sky (MIT).
+- GitHub: Iris shader template and documentation, At87668/LIGHT-Shaders (Chocapic13 sharing rules; inspected, no source copied), MakeUp Ultra Fast (LGPL-3.0), Glimmer (MIT), Spectrum (MIT), opengl_sky (MIT).
 - Research and licensing decisions are recorded in VISUAL-RESEARCH.md. Do not copy code from ARR, NC, ND, or unclear-license projects. Verify exact source provenance and obligations before any adaptation.
 
-## Verification status
+## Active review and verification status
 
+- PR #2: https://github.com/Pawar-47/Nova-Shaders/pull/2 — shader-only cleanup and per-leaf vertex wind. Working branch: `shader-only-research`.
+- Latest implementation checkpoint before this note: `946947648643749254e0003c71a7cb6e6889c0a9` (includes the latest main checkpoint as a merge parent).
+- The PR currently has no reported status checks / Actions run. The repository connector did not trigger the PR workflow, and a local clone attempt could not resolve github.com, so the changed checker and packaging script have not been executed in this environment.
 - Existing static shader checks and archive packaging have passed in previous runs.
-- No GLSL driver compilation, Iris 1.8.x in-game render validation, target-machine screenshots or FPS benchmark has been performed.
+- No GLSL driver compilation, Iris 1.8.x in-game render validation, target-machine screenshots or FPS benchmark has been performed. Do not merge or release this branch until its source checks and packaging have actually run.
 - A passing static CI job is not proof of shader compilation, visual quality or performance.
 - Do not claim that water/cloud/foliage visuals are complete until they have been inspected in-game.
 
