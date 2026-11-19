@@ -1,6 +1,6 @@
 # Nova Shaders Development Checkpoint
 
-Last updated: v0.10.3 patch preparation (1.21.5 foliage-model compatibility fix; visual verification pending)
+Last updated: v0.10.3 published (1.21.5 foliage-model compatibility fix; visual verification pending)
 
 ## Project and target
 
@@ -13,9 +13,9 @@ Last updated: v0.10.3 patch preparation (1.21.5 foliage-model compatibility fix;
 ## Repository state
 
 - Repository: `https://github.com/Pawar-47/Nova-Shaders.git`.
-- Pull request #1 (`natural-visuals-0.10.2`) was merged by the repository owner. Release `v0.10.2` is published with shader and foliage ZIP assets.
-- A post-release audit found that the v0.10.2 companion plant models used ±60° rotations, unsupported by the Minecraft 1.21.5 block-model format. The source models are now corrected to ±67.5°, and `tools/check_foliage_pack.py` rejects any plant rotation that is not a multiple of 22.5°. The shader ZIP is unaffected; do not use the old v0.10.2 foliage companion on 1.21.5. A corrected patch release `v0.10.3` is being prepared.
-- GitHub Actions run `44617119166` passed on the source-fix commit: shader checks, foliage JSON/reference checks, and both ZIP packaging/upload steps passed. Release `v0.10.3` has not yet been published.
+- Pull request #1 (`natural-visuals-0.10.2`) was merged by the repository owner. Release `v0.10.2` remains published; its shader ZIP is usable, but its foliage companion has been superseded because of the plant-angle compatibility issue below. Release `v0.10.3` is now published with corrected shader and foliage ZIP assets.
+- A post-release audit found that the v0.10.2 companion plant models used ±60° rotations, unsupported by the Minecraft 1.21.5 block-model format. The models are corrected to ±67.5°, and `tools/check_foliage_pack.py` rejects any plant rotation that is not a multiple of 22.5°. Use the v0.10.3 foliage companion on Minecraft 1.21.5.
+- GitHub Actions run `44617274998` passed on main commit `436c2e5`: shader checks, foliage JSON/reference checks, both ZIP builds, both artifact uploads and publication of release `v0.10.3` all succeeded.
 - The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No third-party shader or resource-pack model files were copied; Glimmer and Spectrum remain the only shader source adaptations. The Edgy Foliage grass-edge approach is attributed in the companion notices.
 - Added `companion/nova-natural-foliage/`, an original optional MIT resource pack: one randomized angled plane per vanilla leaf block; three crossed planes for short grass, fern, seagrass, dead bush, bush, short/tall dry grass and Nether sprouts; and a grass-block side fringe. Tall grass and large fern remain vanilla. Snow-covered grass keeps the vanilla `grass_block_snow` model. The pack is built as a separate ZIP and validated by `tools/check_foliage_pack.py`. Geometry cost and compatibility are not yet benchmarked.
 
@@ -54,7 +54,7 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 
 ## Verification status
 
-- GitHub Actions run `44617119166` passed on the 1.21.5 rotation-fix commit: shader source checks, optional foliage JSON/reference checks (including selected plant geometry, tint-index rules, snowy grass fallback and valid 22.5-degree rotation increments), packaging of both ZIPs and upload of both artifacts all succeeded. The v0.10.3 release is pending the VERSION bump.
+- GitHub Actions run `44617274998` passed on main commit `436c2e5`: shader source checks, optional foliage JSON/reference checks (including selected plant geometry, tint-index rules, snowy grass fallback and valid 22.5-degree rotation increments), packaging of both ZIPs, upload of both artifacts and release publication all succeeded. Release assets are `nova-shaders-0.10.3-shaderpack.zip` and `nova-natural-foliage-0.10.3.zip`.
 - This is static validation and archive packaging only. The shaders have not been compiled by a GLSL driver, loaded in Iris, rendered in Minecraft, or benchmarked on the Intel HD 5500.
 - The balanced overhead cloud field (0.014 near-view scale and 0.050 detail scale), matching source-check assertion, cutout-mipped leaf render-layer check, horizontal-only water opacity floor, `PERFORMANCE` preset, and optional leaf/plant models plus the snowy grass-state fallback are included in this passing run.
 - `PERFORMANCE` sets `SHADOWS=0`; Iris's conditional `shadow.enabled = false` disables the shadow render pass itself, not just fragment shadow sampling. FXAA is also disabled; clouds and water remain enabled.
