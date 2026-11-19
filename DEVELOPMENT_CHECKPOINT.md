@@ -1,6 +1,6 @@
 # Nova Shaders Development Checkpoint
 
-Last updated: 0.10.2 branch (natural cloud and water refinements; visual verification pending)
+Last updated: 0.10.2 branch (cloud/water refinements and companion-pack CI; visual verification pending)
 
 ## Project and target
 
@@ -16,7 +16,8 @@ Last updated: 0.10.2 branch (natural cloud and water refinements; visual verific
 - `main` was at `a7bf008` (v0.10.1) when this work started. Active work branch: `natural-visuals-0.10.2`; pull request: `https://github.com/Pawar-47/Nova-Shaders/pull/1`.
 - v0.10.2 is proposed on the PR branch and is not yet merged or released. The PR workflow run `44612327841` completed successfully: static shader checks, packaging and artifact upload passed. The release step was correctly skipped because this is a pull request.
 - The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No new third-party shader source or resource-pack model code was copied; Glimmer and Spectrum remain the only shader source adaptations.
-- Added `companion/nova-natural-foliage/`, an original optional MIT resource pack with one randomized angled plane per vanilla leaf block plus an Edgy Foliage-inspired grass-block side fringe (upstream MIT notice included). It is packaged separately from the shader ZIP and validated by `tools/check_foliage_pack.py`. Geometry cost and compatibility are not yet benchmarked. The pack does not change tall-grass or shrub models.
+- Added `companion/nova-natural-foliage/`, an original optional MIT resource pack with one randomized angled plane per vanilla leaf block plus a grass-block side fringe. It is packaged as a separate ZIP, validated by `tools/check_foliage_pack.py`, and attached separately to CI artifacts and GitHub releases. Geometry cost and compatibility are not yet benchmarked. The pack does not change tall-grass or shrub models.
+- The latest confirmed successful PR workflow run is `44614644080` (commit `94132d5`): shader source checks, companion-pack validation, both ZIP builds and artifact uploads passed. The duplicate companion check briefly added to `check_shaders.sh` was removed; the dedicated `tools/check_foliage_pack.py` remains the single companion validator. No GLSL compilation or Minecraft rendering occurred.
 
 
 ## Audit: why the pack still reads as basic
