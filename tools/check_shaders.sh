@@ -195,9 +195,23 @@ for entry in gbuffers_terrain.vsh gbuffers_terrain.fsh shadow.vsh; do
     fi
 done
 
-if ! grep -qF 'float horizonMass = valueNoise(horizonXZ * fieldScale + wind);' "$sky"; then\n    fail "horizon LOD must use the same asymmetric cloud domain as the main samples"\nfi\n\nsection "cloud horizon stability"
+section "water opacity and cloud shape"
+
+if ! grep -qF 'float depthAlpha = max(0.72, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
+    fail "horizontal water must retain a tinted translucent body instead of becoming clear"
+fi
+
+section "cloud horizon stability"
 
 sky="$shaders/lib/sky.glsl"
+if ! grep -qF 'float fieldScale = mix(0.0030, 0.0010, horizonLod);' "$sky" ||
+   ! grep -qF 'worldXZ.y * 0.78 - worldXZ.x * 0.11' "$sky"; then
+    fail "cloud field must use broad, asymmetric cloud masses across the sky"
+fi
+if ! grep -qF 'float horizonMass = valueNoise(horizonXZ * fieldScale + wind);' "$sky"; then
+    fail "horizon LOD must use the same asymmetric cloud domain as the main samples"
+fi
+
 if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" ||
    ! grep -qF 'mass = mix(mass, horizonMass, horizonBlend);' "$sky"; then
     fail "cloud march does not blend to a stable low-frequency horizon field"
