@@ -77,7 +77,9 @@ import zipfile
 
 source, output = sys.argv[1], sys.argv[2]
 with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
-    for name in ("pack.mcmeta", "README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt"):\n        archive.write(os.path.join(source, name), name)\n    for base, dirs, files in os.walk(os.path.join(source, "assets")):
+    for name in ("pack.mcmeta", "README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt"):
+        archive.write(os.path.join(source, name), name)
+    for base, dirs, files in os.walk(os.path.join(source, "assets")):
         dirs.sort()
         for name in sorted(files):
             if name == ".DS_Store":
@@ -90,10 +92,10 @@ fi
 if command -v unzip >/dev/null 2>&1; then
     for required in pack.mcmeta LICENSE README.md THIRD-PARTY-NOTICES.txt assets/nova/models/block/natural_leaves.json assets/minecraft/blockstates/oak_leaves.json assets/minecraft/blockstates/grass_block.json; do
         if ! unzip -l "$foliage_out" | grep -qE " ${required}$"; then
-            printf 'error: optional foliage archive is missing %s\\n' "$required" >&2
+            printf 'error: optional foliage archive is missing %s\n' "$required" >&2
             exit 1
         fi
     done
 fi
 
-printf 'wrote %s (%s bytes)\\n' "$foliage_out" "$(wc -c < "$foliage_out" | tr -d '[:space:]')"
+printf 'wrote %s (%s bytes)\n' "$foliage_out" "$(wc -c < "$foliage_out" | tr -d '[:space:]')"
