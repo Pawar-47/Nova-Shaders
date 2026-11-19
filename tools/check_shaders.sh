@@ -199,6 +199,16 @@ for entry in gbuffers_terrain.vsh gbuffers_terrain.fsh shadow.vsh; do
     fi
 done
 
+section "integrated GPU performance profile"
+
+if ! grep -qF '#if SHADOWS == 0' "$shaders/shaders.properties" ||
+   ! grep -qF 'shadow.enabled = false' "$shaders/shaders.properties" ||
+   ! grep -qF 'profile.PERFORMANCE =' "$shaders/shaders.properties" ||
+   ! grep -qF 'SHADOWS=0' "$shaders/shaders.properties" ||
+   ! grep -qF 'profile.PERFORMANCE=Performance' "$lang"; then
+    fail "PERFORMANCE profile must disable the Iris shadow pass and have a visible label"
+fi
+
 section "water opacity and cloud shape"
 
 if ! grep -qF 'float depthAlpha = max(0.82, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
