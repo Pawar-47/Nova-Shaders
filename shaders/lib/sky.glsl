@@ -5,9 +5,12 @@
 
 /* The sky, the sun, the moon and the cloud sheet.
  *
- * Every direction in this file is a normalised world space direction. "World
- * space" means camera relative world space, which is what the inverse model
- * view hands out, so nothing here drifts when the player moves.
+ * Every direction here is a normalised world space direction, in camera
+ * relative world space, so nothing drifts when the player moves.
+ *
+ * The palette is deliberately restrained. A very saturated blue sky drags every
+ * shadow, every distant hill and every reflection blue with it, which is what
+ * the first version did; these values sit much closer to neutral daylight.
  */
 
 struct NovaSky {
@@ -36,58 +39,59 @@ NovaSky novaSkyState() {
     sky.sunDir = novaSunDirection();
     sky.moonDir = novaMoonDirection();
     sky.lightDir = novaLightDirection();
-    sky.day = smoothstep(-0.10, 0.25, sky.sunDir.y);
-    sky.sunset = (1.0 - smoothstep(0.0, 0.30, abs(sky.sunDir.y)))
-               * smoothstep(-0.30, 0.05, sky.sunDir.y);
+    sky.day = smoothstep(-0.12, 0.22, sky.sunDir.y);
+    sky.sunset = (1.0 - smoothstep(0.0, 0.26, abs(sky.sunDir.y)))
+               * smoothstep(-0.26, 0.04, sky.sunDir.y);
     return sky;
 }
 
-/* Vertical gradient with a warm band on the sun side while it sets. This is the
-   only sky colour the pack uses: the fog samples the same function, which is
-   what makes distant terrain fade into the sky instead of into a guess. */
+/* Vertical gradient, sunset band and sun glow.
+ *
+ * No pow() in here on purpose: this runs for every sky pixel and for every
+ * water reflection, and sqrt() is one instruction where pow() is a call. */
 vec3 novaSkyGradient(vec3 direction, NovaSky sky) {
     vec3 dir = normalize(direction);
     float above = saturate(dir.y);
+    float height = sqrt(above);
 
-    vec3 zenithDay = vec3(0.10, 0.28, 0.62);
-    vec3 horizonDay = vec3(0.60, 0.74, 0.90);
-    vec3 zenithNight = vec3(0.006, 0.010, 0.026);
-    vec3 horizonNight = vec3(0.030, 0.045, 0.080);
-
-    vec3 zenith = mix(zenithNight, zenithDay, sky.day);
-    vec3 horizon = mix(horizonNight, horizonDay, sky.day);
+    vec3 zenith = mix(vec3(0.015, 0.021, 0.038), vec3(0.33, 0.49, 0.72), sky.day);
+    vec3 horizon = mix(vec3(0.045, 0.056, 0.082), vec3(0.71, 0.79, 0.86), sky.day);
 
     // How much this direction looks towards the sun, flattened onto the horizon.
     vec2 flatDir = normalize(vec2(dir.x, dir.z) + vec2(1.0e-4, 0.0));
     vec2 flatSun = normalize(vec2(sky.sunDir.x, sky.sunDir.z) + vec2(1.0e-4, 0.0));
     float towardsSun = saturate(dot(flatDir, flatSun) * 0.5 + 0.5);
 
-    float band = sky.sunset * (1.0 - saturate(abs(dir.y) * 2.2)) * pow(towardsSun, 2.0);
-    horizon = mix(horizon, vec3(1.00, 0.42, 0.16), band * 0.85);
+    // Warm band along the horizon on the sun side, while it is setting.
+    float band = sky.sunset * (1.0 - saturate(abs(dir.y) * 2.5)) * towardsSun * towardsSun;
+    horizon = mix(horizon, vec3(1.00, 0.50, 0.24), band * 0.70);
 
-    // Wide glow around the sun itself, only near the horizon.
-    float glow = pow(saturate(dot(dir, sky.sunDir)), 10.0);
-    horizon += vec3(1.00, 0.70, 0.38) * glow * sky.sunset * 0.30;
+    // A wider glow right around the sun itself.
+    float glow = saturate(dot(dir, sky.sunDir));
+    glow *= glow;
+    glow *= glow;
+    glow *= glow;                                    // glow to the eighth
+    horizon += vec3(1.00, 0.74, 0.46) * glow * sky.sunset * 0.20;
 
-    float height = pow(above, 0.42);
     vec3 colour = mix(horizon, zenith, height);
 
-    // Below the horizon, fall into a flat haze rather than wrapping the dome.
-    colour *= mix(1.0, 0.55, 1.0 - smoothstep(-0.30, 0.0, dir.y));
+    // Below the horizon, fade into haze instead of wrapping the dome.
+    colour *= mix(1.0, 0.62, 1.0 - smoothstep(-0.30, 0.0, dir.y));
 
-    // Let vanilla's fog colour pull the horizon into the right biome and
-    // dimension: red in the Nether, purple in the End, blue-grey at home.
-    colour = mix(colour, fogColor, 0.25 * (1.0 - height));
+    // A whisper of vanilla's fog colour: enough to keep the Nether red and the
+    // End purple, not enough to tint an ordinary horizon blue.
+    colour = mix(colour, fogColor, 0.10 * (1.0 - height));
 
-    // Rain flattens the whole sky into a grey lid.
+    // Rain: flatter and greyer, not darker and bluer.
     float gloom = saturate(rainStrength);
-    colour = mix(colour, vec3(luma(colour)) * vec3(0.72, 0.76, 0.82), gloom * 0.65);
+    colour = mix(colour, vec3(luma(colour)) * vec3(0.90, 0.92, 0.95), gloom * 0.55);
 
     return colour;
 }
 
-/* Offset of dir from centre, measured in the plane tangent to centre. Using a
-   tangent basis instead of acos(dot()) keeps the disc edge sharp and cheap. */
+/* Offset of dir from centre, measured in the plane tangent to centre. A tangent
+   basis keeps the disc edge sharp, where acos(dot()) loses precision exactly at
+   the edge. Only reached for pixels that face the sun or the moon. */
 vec2 novaDiscOffset(vec3 dir, vec3 centre) {
     vec3 reference = abs(centre.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
     vec3 tangentX = normalize(cross(centre, reference));
@@ -100,43 +104,55 @@ vec3 novaSunDisc(vec3 direction, NovaSky sky) {
     if (dot(direction, sky.sunDir) < 0.9) return vec3(0.0);
 
     float radius = length(novaDiscOffset(direction, sky.sunDir));
-    float body = 1.0 - smoothstep(0.016, 0.021, radius);
-    float halo = pow(saturate(1.0 - radius * 6.0), 3.0) * 0.35;
+    float body = 1.0 - smoothstep(0.015, 0.019, radius);
 
-    vec3 warm = mix(vec3(1.00, 0.96, 0.88), vec3(1.00, 0.52, 0.22), sky.sunset);
-    return (warm * body + warm * halo) * mix(0.6, 1.0, sky.day) * 6.0;
+    float halo = saturate(1.0 - radius * 5.0);
+    halo *= halo * halo * 0.18;
+
+    vec3 warm = mix(vec3(1.00, 0.96, 0.90), vec3(1.00, 0.55, 0.26), sky.sunset);
+    return (warm * body + warm * halo) * mix(0.55, 1.0, sky.day) * 4.0;
 }
 
 vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
     if (dot(direction, sky.moonDir) < 0.9) return vec3(0.0);
 
     vec2 offset = novaDiscOffset(direction, sky.moonDir);
-    float body = 1.0 - smoothstep(0.011, 0.015, length(offset));
+    float body = 1.0 - smoothstep(0.010, 0.014, length(offset));
 
     // A little procedural mottling so the disc is not a flat coin.
-    float mottle = 0.80 + 0.20 * valueNoise(offset * 70.0);
-    return vec3(0.72, 0.80, 1.00) * mottle * body * (1.0 - sky.day) * 2.2;
+    float mottle = 0.82 + 0.18 * valueNoise(offset * 70.0);
+    return vec3(0.80, 0.85, 1.00) * mottle * body * (1.0 - sky.day) * 1.6;
 }
 
-/* One flat noise sheet, sampled in world space so it stays anchored to the
-   ground while the camera moves. */
+/* Small scattered puffs.
+ *
+ * Two noise fields do the work. A low frequency mask decides where the cloud
+ * banks are at all, so most of the sky is empty; a higher frequency field cuts
+ * each bank into puffs. That is what makes the sky intermittent instead of a
+ * continuous sheet, and it costs one extra noise lookup. */
 float novaCloudDensity(vec2 worldXZ, int octaves) {
-    vec2 p = worldXZ * 0.0018;
-    p += vec2(frameTimeCounter * 0.0032, frameTimeCounter * 0.0011);
+    vec2 p = worldXZ * 0.0100;
+    p += vec2(frameTimeCounter * 0.0090, frameTimeCounter * 0.0035);
+
+    float cluster = valueNoise(p * 0.20 + 17.3);
+    float clusterStart = mix(0.58, 0.24, saturate(CLOUD_COVERAGE));
+    float mask = smoothstep(clusterStart, clusterStart + 0.14, cluster);
 
     float n = fbm(p, octaves);
-    float threshold = mix(0.70, 0.28, saturate(CLOUD_COVERAGE));
-    return smoothstep(threshold, threshold + 0.20, n);
+    float puffStart = mix(0.55, 0.34, saturate(CLOUD_COVERAGE));
+    float puff = smoothstep(puffStart, puffStart + 0.12, n);
+
+    return puff * mask;
 }
 
 vec3 novaCloudColour(NovaSky sky) {
-    vec3 lit = vec3(1.05, 1.02, 0.96) * (0.30 + 0.80 * sky.day);
-    vec3 shade = mix(vec3(0.06, 0.08, 0.14), vec3(0.42, 0.46, 0.54), sky.day);
+    vec3 lit = vec3(1.02, 1.00, 0.96) * (0.32 + 0.78 * sky.day);
+    vec3 shade = mix(vec3(0.10, 0.11, 0.13), vec3(0.62, 0.64, 0.68), sky.day);
 
-    vec3 colour = mix(shade, lit, 0.72);
-    colour = mix(colour, vec3(1.00, 0.52, 0.28), sky.sunset * 0.45);
+    vec3 colour = mix(shade, lit, 0.75);
+    colour = mix(colour, vec3(1.00, 0.62, 0.42), sky.sunset * 0.40);
 
-    return mix(colour, vec3(luma(colour)) * 0.70, saturate(rainStrength) * 0.70);
+    return mix(colour, vec3(luma(colour)) * 0.90, saturate(rainStrength) * 0.70);
 }
 
 /* Composite the cloud sheet over an already drawn sky colour. */
@@ -145,19 +161,20 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     return skyColour;
 #else
     float altitude = CLOUD_ALTITUDE - cameraPosition.y;
-    if (altitude <= 0.0 || direction.y <= 0.02) return skyColour;
+    if (altitude <= 0.0 || direction.y <= 0.03) return skyColour;
 
     float rayLength = altitude / direction.y;
-    vec2 hit = cameraPosition.xz + direction.xz * rayLength;
 
+    // Fade the sheet out with distance and as the ray grazes the horizon, so
+    // clouds never smear into streaks along the skyline.
+    float fade = (1.0 - smoothstep(700.0, 2600.0, rayLength))
+               * smoothstep(0.03, 0.20, direction.y);
+    if (fade < 0.01) return skyColour;
+
+    vec2 hit = cameraPosition.xz + direction.xz * rayLength;
     float density = novaCloudDensity(hit, CLOUD_OCTAVES);
 
-    // Fade the sheet out where it is far away, and where the ray grazes the
-    // horizon, so it reads as a lid that goes on forever.
-    float farFade = 1.0 - smoothstep(1200.0, 5200.0, rayLength);
-    float horizonFade = smoothstep(0.02, 0.16, direction.y);
-
-    return mix(skyColour, novaCloudColour(sky), density * farFade * horizonFade * 0.92);
+    return mix(skyColour, novaCloudColour(sky), density * fade * 0.95);
 #endif
 }
 

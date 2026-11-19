@@ -23,8 +23,8 @@ layout(location = 0) out vec4 fragColor;
 
 /* Under water red is absorbed first, and the contrast drops with it. */
 vec3 underwaterGrade(vec3 linearColour) {
-    linearColour *= vec3(0.42, 0.78, 0.92);
-    linearColour += vec3(0.000, 0.010, 0.022);
+    linearColour *= vec3(0.55, 0.86, 0.95);
+    linearColour += vec3(0.000, 0.008, 0.016);
     return linearColour;
 }
 
@@ -35,6 +35,10 @@ void main() {
     // The gbuffer shaders write display encoded colour, so decode before
     // grading: exposure and tonemapping only mean anything in linear light.
     vec3 colour = sRGBToLinear(scene) * COLOR_EXPOSURE;
+
+    // A very small warm balance. The filmic curve lifts the blue channel a
+    // little on its own, and this keeps the result reading as daylight.
+    colour *= vec3(1.030, 1.000, 0.975);
 
 #if UNDERWATER_TINT == 1
     if (isEyeInWater == 1) colour = underwaterGrade(colour);

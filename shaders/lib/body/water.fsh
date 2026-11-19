@@ -54,17 +54,21 @@ void main() {
     vec3 light = novaSurfaceLight(normal, NdotL, vLightCoord, shadow, sky);
     vec3 body = albedo.rgb * light;
 
-    // Deep water eats red first, so the colour under the surface is never just
-    // the tinted texture.
-    vec3 deepWater = vec3(0.020, 0.075, 0.105) * (0.25 + 0.90 * sky.day);
-    body = mix(body, deepWater, 0.40);
+    // Absorption: water loses red first, so what made it through the surface
+    // shifts slightly green. Kept gentle so the biome colour still shows.
+    body = mix(body, body * vec3(0.80, 0.96, 1.00), 0.55);
 
     vec3 reflection = novaWaterReflection(toEye, normal, sky);
     float fresnel = novaFresnel(dot(normal, toEye));
-    vec3 colour = mix(body, reflection, fresnel);
+
+    // Ripples tilt the surface, so a little more sky reaches the eye than flat
+    // water Fresnel suggests. The constant keeps distant water reading as a sheet
+    // rather than as a mirror.
+    float reflectivity = clamp(fresnel * 1.10 + 0.05, 0.0, 0.90);
+    vec3 colour = mix(body, reflection, reflectivity);
 
     // Tight sun glint, and only where the light actually reaches the surface.
-    colour += novaSunlight(sky) * novaWaterGlint(toEye, normal, sky) * shadow * 12.0;
+    colour += novaSunlight(sky) * novaWaterGlint(toEye, normal, sky) * shadow * 6.0;
 
 #ifndef NOVA_HAND
     colour = applyFog(colour, vPlayerPos, sky);

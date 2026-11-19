@@ -7,9 +7,9 @@
 /* Exponential height fog.
  *
  * Density falls off with altitude above FOG_HEIGHT, so valleys and the sea stay
- * hazy while hill tops stay clear. The colour comes from the sky gradient, the
- * same one the sky is drawn with, so the far plane dissolves into the horizon
- * instead of into an unrelated colour.
+ * hazy while hill tops stay clear. The colour is a near neutral air colour with
+ * a little warmth on the sun side: the first version copied the sky gradient
+ * here, which painted every distant hill blue.
  */
 
 float novaFogAmount(vec3 rayToPoint) {
@@ -40,18 +40,25 @@ float novaFogAmount(vec3 rayToPoint) {
     return 1.0 - exp(-max(opticalDepth, 0.0));
 }
 
+/* Air colour. Desaturated on purpose, and cheap: no sky gradient, no pow(). */
 vec3 novaFogColour(vec3 direction, NovaSky sky) {
-    // Flatten the ray a little: fog should read as a wall around the player,
-    // not as a second copy of the sky dome.
-    vec3 flattened = normalize(vec3(direction.x, max(direction.y, 0.0) * 0.45 + 0.03, direction.z));
-    vec3 colour = novaSkyGradient(flattened, sky);
+    vec3 air = mix(vec3(0.055, 0.064, 0.084), vec3(0.63, 0.69, 0.76), sky.day);
+    air = mix(air, vec3(0.80, 0.64, 0.50), sky.sunset * 0.35);
+
+    // A little extra brightness towards the sun, so haze glows where the light is.
+    float towardsSun = saturate(dot(normalize(direction), sky.sunDir) * 0.5 + 0.5);
+    air += vec3(0.060, 0.050, 0.030) * (towardsSun * towardsSun) * sky.day;
+
+    // A hint of the biome colour vanilla picked for this place, desaturated so
+    // it cannot drag the distance blue.
+    air = mix(air, mix(fogColor, vec3(luma(fogColor)), 0.45), 0.20);
 
     if (isEyeInWater == 1) {
-        vec3 waterHaze = vec3(0.055, 0.135, 0.175) * (0.25 + 0.85 * sky.day);
-        return mix(colour, waterHaze, 0.90);
+        vec3 haze = vec3(0.055, 0.135, 0.155) * (0.25 + 0.85 * sky.day);
+        return mix(air, haze, 0.92);
     }
 
-    return colour;
+    return air;
 }
 
 vec3 applyFog(vec3 colour, vec3 rayToPoint, NovaSky sky) {

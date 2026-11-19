@@ -59,30 +59,51 @@ jobs:
             exit 0
           fi
 
+          # Release notes are written per version: refresh this block whenever
+          # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.1.0
+          ## Nova Shaders 0.2.0
 
-          First public release: an original, MIT licensed shader pack for Iris, written
-          for low end hardware. One shadow map with four filtered taps, one procedural
-          noise field, and a two pass post chain instead of a deferred pipeline.
+          An original, MIT licensed shader pack for Iris, written for low end hardware.
+          One shadow map with four filtered taps, one procedural noise field, and a two
+          pass post chain instead of a deferred pipeline. 0.2.0 is a visual and
+          performance pass on the first release.
+
+          ### Changed in 0.2.0
+
+          - The heavy blue cast is gone. Ambient light is near neutral instead of being
+            sampled straight out of the sky gradient, the sky palette is much less
+            saturated, fog is a desaturated air colour rather than a copy of the sky,
+            reflections are pulled towards grey, and the composite carries a very small
+            warm balance. Textures read as their own colour now
+          - Clouds are small scattered puffs: a low frequency cluster mask decides where
+            the cloud banks are at all, and a higher frequency field cuts each bank into
+            puffs. Most of the sky is empty
+          - Water has five swells set a few degrees apart with irrational wavelength
+            ratios and their own speeds, plus two fine ripples that fade out with
+            distance. No grid, no repetition, no shimmer on the horizon
+          - Smoother and cheaper. The sky gradient was evaluated three times per pixel in
+            0.1.0 and is now zero for opaque pixels and one for sky and water; pow() is
+            out of the hot paths, the cloud sheet uses fewer octaves, and the water
+            normal costs a handful of cosines instead of twelve noise hashes
+          - Exposure defaults to 1.0 and the vignette is softer
 
           ### In this release
 
           - Sun and moon directional lighting with a shadow map: four filtered taps,
             slope scaled bias, normal offset, distance fade, and an option to switch it
             off entirely
-          - Procedural sky: vertical gradient, sunset band that follows the sun,
-            sun disc, moon disc and a noise driven cloud sheet
-          - Exponential height fog that samples the same sky gradient, so the far plane
-            dissolves into the horizon
-          - Water with two crossed wave trains plus a chop term, Schlick Fresnel, a sky
-            reflection and a tight sun glint. Ice and stained glass share the model
+          - Procedural sky: vertical gradient, sunset band that follows the sun, sun disc
+            and moon disc, with scattered cloud puffs over it
+          - Exponential height fog with an altitude falloff and a desaturated air colour
+          - Water with layered directional waves, Schlick Fresnel, a desaturated sky
+            reflection and a sun glint. Ice and stained glass share the model
           - ACES tonemapping with exposure, saturation and contrast, plus an underwater tint
           - FXAA, a subtle vignette and an ordered dither
           - Three option screens (Color, Scene, Quality) and two presets, DEFAULT and POTATO
 
-          ### Deliberately not in 0.1.0
+          ### Deliberately not in 0.2.0
 
           - Screen space terrain reflections in water
           - Volumetric clouds
@@ -101,8 +122,8 @@ jobs:
 
           ### Worth testing first
 
-          Shadows (edges and acne), water from above and below, the cloud sheet at the
-          horizon, rain, and the Nether.
+          The scattered clouds at dawn and dusk, water close up and at a distance, shadow
+          edges, rain, and the Nether.
           NOTES
 
           gh release create "$tag" \
