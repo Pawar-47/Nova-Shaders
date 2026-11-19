@@ -58,8 +58,8 @@ option.shadowMapResolution=Shadow resolution
 option.shadowMapResolution.comment=Size of the shadow map. 2048 is sharper and noticeably slower.
 option.shadowDistance=Shadow distance
 option.shadowDistance.comment=How far from the camera shadows are drawn. Beyond this distance the map fades out.
-option.CLOUD_OCTAVES=Cloud detail
-option.CLOUD_OCTAVES.comment=Noise octaves in the cloud sheet. Fewer is cheaper and blobbier.
+option.CLOUD_STEPS=Cloud steps
+option.CLOUD_STEPS.comment=How many steps the cloud ray march takes through the slab. Higher is smoother and slower.
 
 # On/off labels for the options that are really switches.
 value.SHADOWS.0=Off

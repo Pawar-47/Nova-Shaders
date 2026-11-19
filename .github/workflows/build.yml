@@ -63,14 +63,32 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.6.0
+          ## Nova Shaders 0.7.0
 
           An original, MIT licensed shader pack for Iris, written for low end hardware.
           One shadow map with four filtered taps, one procedural noise field, and a two
-          pass post chain instead of a deferred pipeline. 0.6.0 spreads small puffs over the
-          whole sky and turns the water from transparent to translucent.
+          pass post chain instead of a deferred pipeline. 0.7.0 rebuilds the clouds as a marched
+          slab and the water around the reference surface model.
 
-          ### Changed in 0.6.0
+          ### Changed in 0.7.0
+
+          - Clouds are a marched slab, not a painted dome. The view ray is intersected with a
+            60 block slab and walked in CLOUD_STEPS steps, accumulating transmittance and light
+            front to back, so back puffs hide behind front ones and each puff carries a
+            continuous tone instead of one flat colour. Coverage is height dependent: dense at
+            the base for flat continuous bottoms, eroded towards the top so the crowns separate
+            into rounded puffs. Lighting is analytic per sample with forward scattering near the
+            sun, and the alpha is softened with a square root so the skirt fades rather than
+            being cut. The domain warp is gone, which is what was making them shear and swim
+          - Water follows the reference surface model: three octaves of analytic noise gradient
+            slope summed into one tilt with a single flatness value, flattened by incidence so
+            it mirrors at grazing angles without a distance fade. Squared Fresnel with a 0.75
+            ceiling, sky only reflection, a soft eleven degree glitter disc, a dark teal body
+            lit from the flat normal, and the reference depth curve for transparency
+          - CLOUD_OCTAVES is replaced by CLOUD_STEPS, the march budget: 4 on POTATO, 5 by
+            default, up to 8
+
+          ### Carried over from 0.6.0
 
           - Clouds are small lopsided puffs spread over the whole sky. The old field used
             cells about a hundred blocks across and a large scale mask that grouped them into
@@ -149,7 +167,7 @@ jobs:
           - FXAA, a subtle vignette and an ordered dither
           - Three option screens (Color, Scene, Quality) and two presets, DEFAULT and POTATO
 
-          ### Deliberately not in 0.6.0
+          ### Deliberately not in 0.7.0
 
           - Screen space terrain reflections in water
           - Volumetric clouds
@@ -168,9 +186,9 @@ jobs:
 
           ### Worth testing first
 
-          Looking straight up, where there should now be puffs overhead and not only near the
-          skyline; cloud drift; shallow water over sand against deep water; glass panes and
-          waterfalls; rain; and the Nether.
+          Cloud silhouettes and their bases, cloud shading at noon and through a sunset, water
+          from above and from the shore and underwater, shallow against deep water, the sun
+          glitter path, glass panes and waterfalls, rain, and the Nether.
           NOTES
 
           gh release create "$tag" \

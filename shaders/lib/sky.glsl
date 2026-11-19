@@ -124,96 +124,148 @@ vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
     return vec3(0.80, 0.85, 1.00) * mottle * body * (1.0 - sky.day) * 1.6;
 }
 
-/* Cloud field.
+/* Cloud density at one point in the slab.
  *
- * One FBM at a small cell size, thresholded hard enough that what survives are
- * separate little islands rather than a sheet, and domain warped so every island is
- * lopsided.
+ * g is the height inside the slab, 0 at the base and 1 at the top. The threshold
+ * rises with height, and that is what turns a noise field into cumulus: near the
+ * base almost half of the field is dense, so the bottoms are flat and continuous;
+ * by the top only the tallest peaks survive, so the crowns break into separate
+ * rounded puffs. The union of those silhouettes is what reads as fluffy.
  *
- * There is deliberately no large scale mask. A mask arranged the clouds into banks
- * and left most of the sky empty - including straight overhead - because the patch
- * of sky you see when you look up is only a couple of hundred blocks across and
- * spans barely two cells of a coarse field. Small cells spread evenly fix both
- * problems at once.
+ * There is no domain warping. Warping a noise field every frame is exactly what
+ * makes clouds shear, swim and look distorted.
  */
-float novaCloudDensity(vec2 worldXZ, vec2 wind, int octaves) {
-    // Roughly forty blocks per cell, so the puffs overhead are small objects and
-    // not one sheet spanning the sky.
-    vec2 p = worldXZ * 0.0235 + wind;
+float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind) {
+    // One octave for the mass, at roughly seventy blocks per cell.
+    vec2 p = worldXZ * 0.0143 + wind;
+    float mass = valueNoise(p);
 
-    // One low frequency sample, used both to warp the field and to vary how dense
-    // the puffs are from place to place.
-    float drift = valueNoise(p * 0.11 + 17.3);
-    vec2 warp = vec2(drift, fract(drift * 5.7 + 0.31)) - 0.5;
+    // A weak, faster field for rag on the edges. Kept weak on purpose: a heavy
+    // detail term chews the silhouette up.
+    mass += (detail - 0.5) * 0.10;
 
-    float n = fbm(p + warp * 1.15, octaves);
+    float threshold = mix(0.62, 0.38, saturate(CLOUD_COVERAGE)) + smoothstep(0.18, 1.0, g) * 0.30;
+    float density = mass - threshold;
 
-    float start = mix(0.64, 0.41, saturate(CLOUD_COVERAGE)) - drift * 0.06;
-    float puff = smoothstep(start, start + 0.09, n);
+    // Thinner right at the base than just above it, so the bottom edge is a shelf
+    // and not a solid wall.
+    density *= mix(0.55, 1.0, smoothstep(0.0, 0.18, g));
 
-    // A soft shoulder so a puff has a body between its core and its rim.
-    puff *= mix(0.78, 1.0, smoothstep(start + 0.04, start + 0.22, n));
-
-    return puff;
+    // Soft saturating curve: thin stays thin, cores flatten near one.
+    density = saturate(density) * 1.6;
+    return density * inversesqrt(density * density + 0.45);
 }
 
-/* The shaded side of a cloud, before the sun side is added. */
+/* The shaded side of a cloud: a cool slate blue, never black. */
 vec3 novaCloudShade(NovaSky sky) {
-    vec3 colour = mix(vec3(0.09, 0.10, 0.13), vec3(0.43, 0.45, 0.50), sky.day);
-    return mix(colour, vec3(0.62, 0.48, 0.38), sky.sunset * 0.40);
+    vec3 colour = mix(vec3(0.055, 0.065, 0.095), vec3(0.35, 0.39, 0.47), sky.day);
+    return mix(colour, vec3(0.52, 0.40, 0.32), sky.sunset * 0.45);
 }
 
-/* The sun facing side. */
+/* The sun facing side: a slightly blue white. */
 vec3 novaCloudLit(NovaSky sky) {
-    vec3 colour = vec3(1.06, 1.04, 1.00) * (0.14 + 0.86 * sky.day);
-    return mix(colour, vec3(1.00, 0.74, 0.52), sky.sunset * 0.55);
+    vec3 colour = vec3(1.08, 1.09, 1.12) * (0.12 + 0.88 * sky.day);
+    return mix(colour, vec3(1.00, 0.76, 0.55), sky.sunset * 0.60);
 }
 
-/* Composite the cloud sheet over an already drawn sky colour.
+/* Draw the clouds.
  *
- * The shading is a cheap fake volume: a second density sample, shifted towards
- * the sun, tells us whether this bit of cloud is a thin edge (lit, bright) or deep
- * inside a bank (thick, grey). One extra field evaluation, and only on pixels that
- * have cloud in them at all. */
+ * They are a slab, not a painted dome. The ray is intersected with the bottom and
+ * the top of the slab and walked through it in a handful of steps, accumulating a
+ * transmittance and a light in front to back order. That is what gives a deck depth:
+ * back puffs are genuinely hidden behind front ones, and the accumulation produces a
+ * continuous tonal ramp across a puff instead of one flat tone.
+ *
+ * The lighting is analytic per sample - dark base, bright crown, thick cores greyed
+ * out - plus a forward scattering lift when the view points near the light. No
+ * shadow lookups and no per-sample light march, which is what keeps this affordable
+ * on integrated graphics.
+ */
 vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
 #if CLOUDS == 0
     return skyColour;
 #else
-    float altitude = CLOUD_ALTITUDE - cameraPosition.y;
-    if (altitude <= 0.0 || direction.y <= 0.01) return skyColour;
+    float dirY = direction.y;
+    if (abs(dirY) < 1.0e-3) return skyColour;
 
-    float rayLength = altitude / direction.y;
-    vec2 hit = cameraPosition.xz + direction.xz * rayLength;
-    vec2 wind = vec2(frameTimeCounter * 0.0180, frameTimeCounter * 0.0072);
+    // The slab: sixty blocks thick, sitting on CLOUD_ALTITUDE.
+    const float slabThickness = 60.0;
+    float baseY = CLOUD_ALTITUDE;
+    float camY = cameraPosition.y;
 
-    float density = novaCloudDensity(hit, wind, CLOUD_OCTAVES);
-    if (density < 0.004) return skyColour;
+    // Where the ray enters and leaves the slab, whether the camera is below,
+    // inside or above the clouds.
+    float tBottom = (baseY - camY) / dirY;
+    float tTop = (baseY + slabThickness - camY) / dirY;
+    float tNear = max(min(tBottom, tTop), 0.0);
+    float tFar = max(tBottom, tTop);
 
-    // A second sample towards the sun, at two octaves because only the shape
-    // matters here: a low value means this face of the puff has clear air in front
-    // of the light, so it is a sunlit edge. High means it is buried in a bank.
-    vec2 sunShift = normalize(sky.lightDir.xz + vec2(1.0e-4)) * 120.0;
-    float occlusion = novaCloudDensity(hit + sunShift, wind, 2);
+    // Past this the deck is smaller than a pixel; cutting it here stops the
+    // skyline smearing.
+    const float farLimit = 6000.0;
+    if (tNear > farLimit) return skyColour;
+    tFar = min(tFar, farLimit);
+    if (tFar <= tNear) return skyColour;
 
-    float sunlit = saturate(1.0 - occlusion * 1.5 + density * 0.20);
-    vec3 cloudColour = mix(novaCloudShade(sky), novaCloudLit(sky), sunlit);
+    vec2 wind = vec2(frameTimeCounter * 0.0200, frameTimeCounter * 0.0080);
+    float stepLength = (tFar - tNear) / float(CLOUD_STEPS);
 
-    // Silver lining: dense here and clear towards the sun, so this is the edge of a
-    // puff with the light behind it.
-    float rim = saturate((density - occlusion) * 1.6);
-    cloudColour += novaCloudLit(sky) * rim * 0.30;
+    // The fine detail is sampled once, midway: it only has to rag the threshold, it
+    // does not have to travel with every step.
+    vec2 midPoint = cameraPosition.xz + direction.xz * (tNear + tFar) * 0.5;
+    float detail = valueNoise(midPoint * 0.0600 + wind);
 
-    // Rain flattens the whole sheet.
+    // Ordered dither on the first sample so the steps read as grain, not as rings.
+    float t = tNear + stepLength * ((novaDither(gl_FragCoord.xy) + 0.5) * 0.85);
+
+    // Forward scattering: thin edges seen against the light go bright.
+    float towardsLight = saturate(dot(-direction, sky.lightDir) * 0.5 + 0.5);
+    float scattering = towardsLight * towardsLight;
+    scattering *= scattering;
+    scattering *= scattering;
+
+    float transmittance = 1.0;
+    float absorbed = 0.0;
+    float lit = 0.0;
+
+    for (int i = 0; i < CLOUD_STEPS; i++) {
+        float sampleY = camY + dirY * t;
+        float g = saturate((sampleY - baseY) / slabThickness);
+
+        vec2 p = cameraPosition.xz + direction.xz * t;
+        float density = novaCloudDensityAt(p, g, detail, wind);
+
+        if (density > 0.004) {
+            // Dark base, bright crown, thick cores grey. sqrt is the cheap stand in
+            // for pow(g, 1.5).
+            float heightLight = 0.20 + 0.80 * (g * sqrt(g));
+            heightLight *= 1.0 - density * 0.42;
+            heightLight = mix(heightLight, 1.0, scattering * 0.55);
+
+            float absorb = 1.0 - exp(-density * stepLength * 0.055);
+            lit += heightLight * absorb * transmittance;
+            absorbed += absorb * transmittance;
+            transmittance *= 1.0 - absorb;
+
+            if (transmittance < 0.03) break;
+        }
+
+        t += stepLength;
+    }
+
+    float alpha = 1.0 - transmittance;
+    if (alpha < 0.004) return skyColour;
+
+    vec3 cloudColour = mix(novaCloudShade(sky), novaCloudLit(sky), saturate(lit / max(absorbed, 1.0e-4)));
     cloudColour = mix(cloudColour, vec3(luma(cloudColour)) * 0.85, saturate(rainStrength) * 0.70);
 
-    // Towards the horizon the sheet is seen almost edge on, so its noise becomes
-    // sub pixel. Pull it towards the mean density there rather than letting it
-    // shimmer, and let the sky behind it do the hazing.
-    float horizon = 1.0 - smoothstep(0.02, 0.30, direction.y);
-    float shaped = mix(density, 0.38, horizon * 0.85);
+    // Soften the skirt: this thins the outer few percent of every puff to nothing
+    // while the cores stay solid, which is most of the "soft" in soft edges.
+    alpha *= sqrt(alpha);
 
-    float farFade = 1.0 - smoothstep(5000.0, 10000.0, rayLength);
-    float alpha = shaped * farFade * (1.0 - horizon * 0.30);
+    // Grazing rays skim the slab instead of entering it: fade them out rather than
+    // letting the deck smear along the skyline.
+    alpha *= smoothstep(0.004, 0.045, abs(dirY));
 
     return mix(skyColour, cloudColour, saturate(alpha));
 #endif

@@ -6,26 +6,16 @@
 
 /* Water surface.
  *
- * Three swell trains give the large motion: directions a few degrees apart,
- * wavelengths in an irrational ratio, each running at its own speed, so they never
- * line up into a visible grid. On top of that sits a noise gradient at roughly one
- * block per cell, which is the high frequency detail that actually reads as water.
- * Sines alone always look like corrugated iron from some angle; the noise is what
- * makes the surface glitter and break up.
+ * Three octaves of slope, each the exact gradient of a value noise field, summed
+ * into one XY tilt. The gradient is analytic, so three octaves cost three noise
+ * lookups instead of nine.
  *
- * The surface is a height field, so the normal is the sum of every gradient
- * tilted into the Y axis.
+ * Two things keep it reading as water rather than as moving glass:
+ *   - the tilt is flattened by incidence, so looking down you get the full chop and
+ *     looking along the surface it becomes a mirror. That is what keeps distant
+ *     water stable without a distance fade;
+ *   - the flatness is a single Z value, so roughness is one number and not a filter.
  */
-
-const vec2 SWELL_DIRECTION[3] = vec2[3](
-    vec2( 0.94,  0.34),
-    vec2(-0.39,  0.92),
-    vec2( 0.66, -0.75)
-);
-
-const float SWELL_LENGTH[3] = float[3](12.9, 7.3, 4.1);
-const float SWELL_SPEED[3] = float[3](0.55, -0.82, 1.14);
-const float SWELL_SLOPE[3] = float[3](0.085, 0.060, 0.040);
 
 vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 #if WATER_WAVES == 0
@@ -34,73 +24,59 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
     // Only the top of a liquid gets waves; the side of flowing water stays flat.
     if (geometricNormal.y < 0.75) return geometricNormal;
 
-    float time = frameTimeCounter;
     vec2 p = worldPos.xz;
+    float time = frameTimeCounter;
     float viewDistance = length(worldPos);
 
-    vec2 slope = vec2(0.0);
+    // A 20 block swell, a 32 block cross swell, and an 8 block chop that carries
+    // most of the detail.
+    vec3 swellA = valueNoiseGradient(p * 0.0500 + vec2(time * 0.30, time * 0.30));
+    vec3 swellB = valueNoiseGradient(p * 0.03125 - vec2(time * 0.42, time * 0.42));
 
-    for (int i = 0; i < 3; i++) {
-        float k = NOVA_TAU / SWELL_LENGTH[i];
-        float phase = dot(p, SWELL_DIRECTION[i]) * k + time * SWELL_SPEED[i];
-        slope += SWELL_DIRECTION[i] * (cos(phase) * k * SWELL_SLOPE[i]);
-    }
+    // The finest octave fades out with distance: without mipmaps it would alias
+    // into noise on the far side of a lake.
+    float fineFade = 1.0 - saturate(viewDistance / 80.0);
+    vec3 chop = valueNoiseGradient(p * 0.1250 + vec2(time * 0.10, -time * 0.10));
 
-    // Fine chop, as the gradient of a noise field. It fades out with distance so
-    // the far water does not dissolve into pixel noise, which is what ripples
-    // finer than a pixel turn into.
-    float detail = 1.0 - saturate(viewDistance / 90.0);
-    if (detail > 0.02) {
-        vec2 q = p * 0.9 + vec2(time * 0.22, -time * 0.17);
-        const float e = 0.35;
-        float n0 = valueNoise(q);
-        float nx = valueNoise(q + vec2(e, 0.0));
-        float nz = valueNoise(q + vec2(0.0, e));
-        slope += vec2(nx - n0, nz - n0) * (0.055 / e) * detail;
-    }
+    vec2 slope = swellA.yz * 0.075 + swellB.yz * 0.085 + chop.yz * 0.036 * fineFade;
 
-    slope *= WATER_WAVE_HEIGHT;
-    return normalize(vec3(-slope.x, 1.0, -slope.y));
+    // Flatness: lower is choppier, and rain roughens the surface.
+    float flatness = 0.90 - saturate(rainStrength) * 0.35;
+
+    vec3 tilted = normalize(vec3(slope.x, flatness, slope.y));
+
+    // Flatten by incidence: full chop underfoot, mirror towards the horizon.
+    float incidence = abs(dot(geometricNormal, normalize(-worldPos)));
+    tilted.xy *= incidence;
+    tilted.z += 1.0 - incidence;
+
+    return normalize(tilted);
 #endif
 }
 
-/* Schlick approximation of Fresnel, with the F0 of water (1.33 refracting). */
+/* Fresnel in the shape the reference water uses: no strong F0, a squared falloff,
+   and a ceiling well below a full mirror, so water keeps its colour even at
+   grazing angles instead of turning into a sheet of sky. */
 float novaFresnel(float cosTheta) {
     float f = 1.0 - saturate(cosTheta);
-    float f2 = f * f;
-    return 0.02 + 0.98 * f2 * f2 * f;
+    return 0.02 + 0.73 * f * f;
 }
 
-/* What the surface mirrors: the sky, including the sun and the moon, pulled
-   slightly towards grey so the water reads as water and not as blue paint. */
+/* What the surface mirrors: the sky, pulled slightly towards grey. */
 vec3 novaWaterReflection(vec3 toEye, vec3 normal, NovaSky sky) {
     vec3 reflected = reflect(-toEye, normal);
     reflected.y = abs(reflected.y);
 
     vec3 reflectedSky = novaSkyGradient(reflected, sky);
-    reflectedSky += novaSunDisc(reflected, sky) * 0.45;
-    reflectedSky += novaMoonDisc(reflected, sky) * 0.40;
-
-    return mix(reflectedSky, vec3(luma(reflectedSky)), 0.16);
+    return mix(reflectedSky, vec3(luma(reflectedSky)), 0.12);
 }
 
-/* Sun glint: a broad sheen under a tight sparkle, so the highlight has a shape
-   instead of being one flat dot. */
+/* Sun and moon glitter: a soft disc where the reflected view meets the light.
+   A wide soft blob reads as water; a tight sparkle reads as glitter on plastic. */
 float novaWaterGlint(vec3 toEye, vec3 normal, NovaSky sky) {
-    vec3 halfVector = normalize(toEye + sky.lightDir + vec3(1.0e-5));
-    float angle = saturate(dot(normal, halfVector));
-
-    float a2 = angle * angle;
-    float a4 = a2 * a2;
-    float a8 = a4 * a4;
-    float a16 = a8 * a8;
-    float a32 = a16 * a16;
-
-    float broad = a32 * a32;      // angle to the 64th
-    float mid = broad * broad;    // angle to the 128th
-    float tight = mid * mid;      // angle to the 256th
-
-    return broad * 0.30 + mid * 0.35 + tight * 0.55;
+    vec3 reflected = reflect(-toEye, normal);
+    float aligned = max(dot(normalize(reflected), sky.lightDir), 0.0);
+    return smoothstep(0.995, 1.0, aligned) * 3.0;
 }
 
 #endif

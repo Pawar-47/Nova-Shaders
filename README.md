@@ -8,7 +8,33 @@ and 12 GB of RAM on Windows. Every choice in it follows from that - a forward li
 instead of a deferred one, one shadow map with four filtered taps, one shared noise field,
 and two full screen passes where most packs have a dozen.
 
-Version **0.6.0**. MIT licensed. It has not been benchmarked (see below).
+Version **0.7.0**. MIT licensed. It has not been benchmarked (see below).
+
+## What changed in 0.7.0
+
+This is the first version built by studying how the two reference packs actually work rather
+than by guessing. Neither pack's source may be reused, so what follows is the approach,
+reimplemented from scratch with this pack's own maths and constants.
+
+- **Clouds are a marched slab now, not a painted dome.** A single noise field sampled by view
+  direction can only ever look like a texture on a sphere. The clouds are a 60 block thick slab
+  that the view ray is intersected with and walked in `CLOUD_STEPS` steps, accumulating
+  transmittance and light front to back: back puffs are genuinely hidden behind front ones and
+  each puff carries a continuous tone instead of one flat colour. Coverage is height dependent
+  - dense at the base, so the bottoms are flat and continuous; eroded towards the top, so the
+  crowns break into separate rounded puffs. Lighting is analytic per sample (dark base, bright
+  crown, thick cores greyed), plus forward scattering when the view points near the sun, and the
+  alpha is softened with a square root so the skirt fades out instead of being cut. The domain
+  warp is gone: warping a field every frame is what made the old clouds shear and swim.
+- **Water follows the reference surface model.** Three octaves of slope, each the exact gradient
+  of a value noise field (analytic, so three octaves cost three lookups rather than nine), summed
+  into one tilt whose flatness is a single Z value. The tilt is flattened by incidence, so there
+  is full chop underfoot and a stable mirror towards the horizon with no distance fade at all.
+  Fresnel is the reference's squared shape with a 0.75 ceiling, the reflection is the sky, and the
+  sun is a soft eleven degree glitter disc rather than a tight sparkle. The body is one dark
+  desaturated teal carrying about a quarter of the biome tint, lit from the flat quad normal, and
+  the transparency is the reference's depth curve: `1 - 1/(thickness * thickness * 0.16 + 1.125)`,
+  so a shallow bottom shows through tinted and eight blocks of water is opaque.
 
 ## What changed in 0.6.0
 
@@ -103,16 +129,18 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
   hardware box filter), slope scaled bias, normal offset, edge and distance fades, and a
   switch to turn it off.
 - **Sky**: procedural vertical gradient, a sunset band that follows the sun across the
-  horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a domain warped FBM
-  field thresholded into small separate puffs spread evenly over the sky, each with a second
-  sample towards the sun for a lit edge, a grey core and a silver lining. Vanilla sun, moon
+  horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a 60 block slab the
+  view ray is marched through in `CLOUD_STEPS` steps, with height eroded coverage, front to
+  back transmittance, analytic per-sample lighting and forward scattering. Vanilla sun, moon
   and cloud geometry is discarded so nothing is drawn twice.
 - **Fog**: light exponential height fog whose density drops with altitude, plus a squared
   distance term that only builds up far away, coloured by a desaturated air colour with a
   little warmth on the sun side.
-- **Water**: three swells plus a noise gradient chop summed into the surface normal, the chop
-  faded out with distance, Schlick Fresnel, a reflection of the sky including its sun and
-  moon, a two part sun glint, and a body that absorbs into a dark teal with depth.
+- **Water**: three noise gradient slope octaves plus a single flatness value for the surface
+  normal, flattened by incidence so it mirrors at grazing angles, a squared Fresnel with a 0.75
+  ceiling, the sky as reflection, a soft glitter disc for the sun and moon, and a depth curve
+  transparency over a dark teal body. Ripples live in the reflection and the thickness, not in
+  the lighting.
 - **Lighting**: the sun with a small wrap so terminators are soft, a hemisphere ambient with
   cool light from above and warm bounce from the ground, and block light for torches and
   lava.
@@ -123,13 +151,13 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 - **Shader Pack Settings**: three screens (Color, Scene, Quality) with sliders, and two
   presets, `DEFAULT` and `POTATO`.
 
-## What is deliberately not in 0.6.0
+## What is deliberately not in 0.7.0
 
 Not missing by accident - left out on purpose, and listed here so nobody has to guess:
 
 - Screen space terrain reflections in water (the water reflects the sky only).
-- Volumetric clouds. There is one flat sheet; its depth comes from a second density sample,
-  not from marching through a volume.
+- Multiple scattering clouds or cloud shadows on the ground. There is one slab, marched in a
+  few steps, with analytic per-sample lighting.
 - Waving foliage, grass or leaves.
 - Wet surfaces after rain. Rain darkens and flattens the sky, nothing more.
 - PBR: no LabPBR, no POM, no parallax, no specular maps. Vanilla textures only.
@@ -174,24 +202,24 @@ chop, the moon mottling and the dither are all generated in GLSL from one hash f
 `shaders/lib/util.glsl`.
 
 The techniques are standard and publicly documented, which is what makes them usable
-without borrowing code. 0.5.0 follows the same well documented family of techniques that
-BSL Shaders is known for - noise gradient water detail, reflecting the sky and its sun in
-the water, a two sample cloud volume, domain warped cloud noise - and every line of it was
-written here. No BSL file, function, constant, coordinate table or structure was copied or
-transliterated.
+without borrowing code. For 0.7.0 the clouds and the water were built by studying published
+descriptions of how BSL Shaders and MakeUp Ultra Fast do them - a transmittance marched cloud
+slab with height eroded coverage, and a slope based water normal flattened by incidence over a
+depth based transparency curve - and then implementing that approach here. Neither pack's
+source is licensed for reuse, and none of it was copied: no file, function, constant,
+coordinate table or structure was taken from either of them.
 
 | Technique | Where |
 | --- | --- |
 | Shadow mapping with a few filtered taps and slope scaled bias | `shaders/lib/shadow.glsl` |
 | Lightmap sky and block light split | `shaders/lib/lighting.glsl` |
 | Exponential height fog | `shaders/lib/fog.glsl` |
-| FBM (fractal value noise) cloud plane | `shaders/lib/util.glsl`, `shaders/lib/sky.glsl` |
+| Transmittance marched cloud slab with height eroded coverage | `shaders/lib/sky.glsl` |
 | Schlick Fresnel, sky reflection, sun glint | `shaders/lib/water.glsl` |
 | ACES filmic tonemapping (Narkowicz fit) | `shaders/lib/util.glsl` |
 | FXAA | `shaders/lib/body/final.fsh` |
-| Layered directional waves with distance fading | `shaders/lib/water.glsl` |
-| Noise gradient surface detail | `shaders/lib/water.glsl` |
-| Domain warped cloud field with two sample shading | `shaders/lib/sky.glsl` |
+| Analytic noise gradient slopes, flattened by incidence | `shaders/lib/water.glsl` |
+| Depth curve transparency over the opaque scene | `shaders/lib/body/water.fsh` |
 
 ## Not benchmarked
 
@@ -229,12 +257,12 @@ shaders/
   lib/
     settings.glsl         every user facing option, and nothing else
     uniforms.glsl         declarations for the Iris uniforms the pack reads
-    util.glsl             colour space, ACES, hash, value noise, FBM
-    sky.glsl              day/sunset amounts, gradient, sun and moon discs, clouds
+    util.glsl             colour space, ACES, hash, value noise and its gradient, dither
+    sky.glsl              day/sunset amounts, gradient, discs, the cloud slab
     shadow.glsl           shadowFactor: four taps, slope scaled bias
     lighting.glsl         sunlight, skylight ambient, warm block light, applyLighting
-    water.glsl            wave normal, Fresnel, reflection, glint
-    fog.glsl              height falloff distance fog using the sky gradient
+    water.glsl            slope normal, Fresnel, reflection, glitter
+    fog.glsl              height falloff distance fog
     body/                 the actual shader bodies the entry points include
 tools/
   check_shaders.sh        static checks, run by CI

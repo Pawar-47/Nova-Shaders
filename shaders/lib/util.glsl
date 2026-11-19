@@ -68,23 +68,28 @@ float valueNoise(vec2 p) {
     return mix(mix(a, b, weight.x), mix(c, d, weight.x), weight.y);
 }
 
-/* Fractal sum of value noise. Each octave is rotated so the grid never shows
-   up as axis aligned squares, which is the giveaway of a cheap noise field. */
-float fbm(vec2 p, int octaves) {
-    mat2 turn = mat2(0.80, 0.60, -0.60, 0.80);
+/* Value noise together with its exact gradient, as (value, d/dx, d/dy).
+   The gradient costs a few multiplies instead of two extra lookups, which is what
+   lets the water afford three octaves of slope detail. */
+vec3 valueNoiseGradient(vec2 p) {
+    vec2 cell = floor(p);
+    vec2 local = fract(p);
+    vec2 blend = local * local * (3.0 - 2.0 * local);
+    vec2 slope = 6.0 * local * (1.0 - local);
 
-    float sum = 0.0;
-    float norm = 0.0;
-    float amplitude = 0.5;
+    float a = novaHash(cell);
+    float b = novaHash(cell + vec2(1.0, 0.0));
+    float c = novaHash(cell + vec2(0.0, 1.0));
+    float d = novaHash(cell + vec2(1.0, 1.0));
 
-    for (int i = 0; i < octaves; i++) {
-        sum += valueNoise(p) * amplitude;
-        norm += amplitude;
-        p = turn * p * 2.03;
-        amplitude *= 0.5;
-    }
+    float ab = mix(a, b, blend.x);
+    float cd = mix(c, d, blend.x);
 
-    return sum / max(norm, 1.0e-4);
+    return vec3(
+        mix(ab, cd, blend.y),
+        mix((b - a) * slope.x, (d - c) * slope.x, blend.y),
+        (cd - ab) * slope.y
+    );
 }
 
 /* 4x4 ordered dither, in the range -0.5 to 0.5.
