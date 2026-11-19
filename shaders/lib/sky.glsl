@@ -240,7 +240,12 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     vec2 horizonXZ = vec2(midPoint.x + midPoint.y * 0.18,
                           midPoint.y * 0.78 - midPoint.x * 0.11);
     float horizonMass = valueNoise(horizonXZ * fieldScale + wind);
-    float detail = valueNoise(horizonXZ * detailScale + wind);
+    float detail = 0.5;
+    // The detail term is multiplied by (1.0 - horizonLod) in every sample.
+    // Once the ray is fully in the horizon LOD, skip the unused noise lookup.
+    if (horizonLod < 0.999) {
+        detail = valueNoise(horizonXZ * detailScale + wind);
+    }
 
     // Ordered dither helps hide march bands in the body, but is suppressed at the horizon.
     float jitter = novaDither(gl_FragCoord.xy) * (1.0 - horizonLod);
