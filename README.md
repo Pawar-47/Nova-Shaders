@@ -9,14 +9,17 @@ march and two full-screen passes. It has not been benchmarked on this hardware, 
 performance guarantee is claimed; start with DEFAULT for balanced visuals, POTATO for a lighter
 cloud/shadow workload, or PERFORMANCE when FPS matters more than dynamic shadows and FXAA.
 
-Version **0.10.3**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.4** (next shader-only release). MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
 
-Nova is distributed as a single shader pack. All visual work—including water, sky, clouds, foliage shading and vegetation animation—must be implemented inside the shader pack; no companion resource pack is part of the project or release pipeline. Shader code can animate and shade vanilla geometry, but it cannot replace block models or change tree generation.
+From **v0.10.4 onward**, Nova will be distributed as one shader pack only. The published v0.10.2 and v0.10.3 releases retain their historical companion ZIPs, but no companion source, validation or packaging remains in this development branch. All future visual work—including water, sky, clouds, foliage shading and vegetation animation—must be implemented inside the shader pack. Shader code can animate and shade vanilla geometry, but it cannot replace block models or change tree generation.
 
-## What changed in 0.10.3
+## What changes in 0.10.4
 
-- The release is now shader-only: CI builds and publishes one Iris shader ZIP. Companion resource-pack sources, validation and packaging are excluded.
+- Future CI builds and releases contain only the Iris shader ZIP; companion source, validation and packaging have been removed.
+- Leaf blocks now receive low-amplitude continuous vertex wind with slow canopy sway, subtle per-vertex flutter, distance fade and matching shadow deformation.
+- Ground plants retain their own sprite-midpoint hinge so leaf blocks and small plants no longer share one deformation rule.
+- High-frequency water gradient-noise ripples are skipped beyond 72 blocks while the analytic wave slope remains active.
 - Leaves now have a separate shader material ID and a low-amplitude, continuous world-space vertex wind field. A slow canopy sway is layered with tiny per-vertex flutter; motion fades with distance and the same displacement is applied in the shadow pass.
 - Ground plants retain their sprite-midpoint hinge, separate from leaf-block motion. This is shader-only and does not add geometry or change vanilla models.
 - High-frequency water ripple noise is now skipped entirely beyond its 72-block detail range; the cheaper analytic wave slope remains.
