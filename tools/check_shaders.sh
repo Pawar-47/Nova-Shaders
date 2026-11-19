@@ -195,7 +195,7 @@ for entry in gbuffers_terrain.vsh gbuffers_terrain.fsh shadow.vsh; do
     fi
 done
 
-section "cloud horizon stability"
+if ! grep -qF 'float horizonMass = valueNoise(horizonXZ * fieldScale + wind);' "$sky"; then\n    fail "horizon LOD must use the same asymmetric cloud domain as the main samples"\nfi\n\nsection "cloud horizon stability"
 
 sky="$shaders/lib/sky.glsl"
 if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" ||
