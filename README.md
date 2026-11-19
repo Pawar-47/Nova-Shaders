@@ -8,8 +8,16 @@ Windows. The pack stays on a compact forward pipeline, one shadow map, a small c
 march and two full-screen passes. It has not been benchmarked on this hardware, so no FPS or
 performance guarantee is claimed; start with the POTATO preset and adjust from there.
 
-Version **0.10.0**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.1**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+## What changed in 0.10.1
+
+- **Vegetation bends instead of sliding.** The wind offset is now weighted by how far each vertex sits above its own sprite midpoint, read from Iris's `mc_midTexCoord`. A plant's base stays planted and only its upper part leans, and the shadow pass applies the identical weight so the cast shadow bends with it.
+- **Vegetation selection can no longer fail silently.** `block.properties` keeps the Iris tag form and adds an explicit 1.21.5 leaf, plant, flower, sapling and crop fallback list, so the block ID is still assigned on a loader without tag support.
+- **Audit notes in the README.** The rendering ceilings are now written down: the cloud sample budget, the four-tap shadow filter, the missing screen-space stage, the 8-bit colour buffer, display-space shading and the packed 16x textures. They are limits of this pipeline, not options left switched off.
+
+These are source-level changes; nothing in this release was rendered or benchmarked. Compare the same plant, leaf block and cloud horizon before and after before judging the result.
 
 ## What changed in 0.10.0
 
@@ -163,12 +171,12 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 - **Sky and clouds:** procedural day/night gradient, sunset band, sun and moon discs, plus a 60-block cloud slab marched in `CLOUD_STEPS` with front-to-back transmittance, analytic shading and a broad horizon LOD.
 - **Fog:** altitude-sensitive height fog plus a distance term, coloured with a restrained air palette.
 - **Water:** Iris block ID 100 limits the shared world-space wave displacement, animated normals, Fresnel sky reflection, sun glint and depth absorption/in-scattering to water. The hand-water pass remains separate.
-- **Vegetation:** Iris tag ID 101 selects leaves and plants for a continuous wind field matched in the shadow pass; grass-block ID 102 receives subtle top-face tone variation.
+- **Vegetation:** Iris block ID 101 selects leaves and plants for a continuous wind field, weighted by each vertex's position above its own sprite midpoint, so a plant bends from its base instead of sliding as a rigid block; the shadow pass applies the identical weight. Grass-block ID 102 receives subtle top-face tone variation only.
 - **Post-processing:** exposure, independent RGB gains, ACES tonemapping, saturation, contrast, underwater tint, FXAA, vignette and ordered dithering.
 - **Alpha coverage:** distance-faded Bayer coverage for terrain cutouts and shadows; other opaque programs keep the previous low cutoff, and translucent entities retain alpha for blending.
 - **Settings:** Color, Scene and Quality screens, with `DEFAULT` and `POTATO` presets.
 
-## What is deliberately not in 0.10.0
+## What is deliberately not in 0.10.1
 
 - Shader-only changes do not alter vanilla tree generation, branch layout, or grass-block density.
 - Screen-space terrain reflections in water.
@@ -176,8 +184,32 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 - Wet surfaces after rain.
 - PBR, LabPBR, parallax, POM or specular maps.
 - Dimension-specific skies, stars, moon phases, coloured shadows, SSAO, bloom or TAA.
-- Iris tag support (Iris 1.7+) is needed for vegetation selection; without it, water mapping still works but vegetation sway is unavailable.
+- Vegetation selection prefers Iris block tags (`IRIS_TAG_SUPPORT`) and falls back to an explicit 1.21.5 block list, so sway does not depend on tag support.
 - The vanilla lightmap texture is not sampled; night vision and blindness are therefore not honoured.
+
+## Why it still looks simpler than large packs
+
+The renderer is deliberately small: one forward gbuffer, one shadow map and two full-screen
+passes. That is where the remaining distance to packs such as Complementary or BSL comes from,
+and it is a budget question rather than an option that is still switched off:
+
+- **Cloud shape.** Four march samples (three in POTATO) are spread across a slab that reaches
+  up to 6000 blocks away, so distant samples land hundreds of blocks apart. The horizon LOD
+  turns that into a stable band instead of grain, but it cannot invent detail. Packs with
+  crisp clouds march far more steps or sample a precomputed 3D noise volume.
+- **Shadows.** One 512 or 1024 map over 48-96 blocks with four filter taps gives hard, slightly
+  stepped edges. Coloured, wide, high-resolution shadows need more taps and bandwidth than an
+  HD Graphics 5500 should spend.
+- **No screen-space effects.** No SSAO, no screen-space reflections, no volumetric light and
+  no bloom. Water mirrors the sky gradient only, so hills and trees are never reflected.
+- **Highlight range.** `colortex0` stays RGBA8 - the half-float format at the top of
+  `lib/body/composite.fsh` is commented out - so the sun disc and emissive geometry clip at
+  1.0 before the tonemapper sees them.
+- **Shading space.** Gbuffer colour stays display encoded to save a decode per pixel, so the
+  light multiply is not fully linear and the contrast is approximated rather than physical.
+- **Textures.** The pack ships no textures. Vanilla 16x foliage and stone keep their own
+  detail ceiling no matter what the shaders do; the detail in showcase screenshots comes from
+  128x-512x resource packs with normal and specular maps.
 
 ## Install (Fabric 1.21.5 + Iris)
 

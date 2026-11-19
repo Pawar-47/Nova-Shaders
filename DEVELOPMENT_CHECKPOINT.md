@@ -1,40 +1,52 @@
 # Nova Shaders Development Checkpoint
 
-Last updated: committing the 0.10.0 source changes
+Last updated: 0.10.1 commit (vegetation bending plus audit notes)
 
 ## Project and target
 
 - Minecraft Java 1.21.5, Iris 1.8.x and Sodium on Windows/SK Launcher.
 - User hardware: Intel Core i3-5005U @ 2.00 GHz and Intel HD Graphics 5500.
 - MIT license. Source adaptations remain limited to the documented Glimmer and Spectrum MIT portions; see `THIRD-PARTY-NOTICES.txt`. No proprietary shader source was used.
-- The user wants substantial visual improvements to water, vegetation/trees/grass and clouds, and actual before/after comparison. Do not equate source-level changes or parameter adjustments with verified visual improvements.
-- Shader-only changes cannot alter vanilla tree generation, branch layout or grass-block density. Those need a resource pack or world-generation work.
-- This environment has no Minecraft/Iris runtime, GLSL compiler, shell or shaderpack build tool. Do not use the web inspector. Static review and CI are the only checks available here.
+- Shader-only changes cannot alter vanilla tree generation, branch layout or grass-block density.
+- This environment has no Minecraft/Iris runtime, GLSL compiler, shell or shaderpack build tool. Static review and CI are the only checks. Do not use the web inspector.
 
 ## Repository state
 
 - Repository: `https://github.com/Pawar-47/Nova-Shaders.git`, branch `main`, tracking `origin/main`.
-- Version metadata is **0.10.0** (`VERSION`, `pack.mcmeta`, `README.md`, release notes in `.github/workflows/build.yml`).
-- The 0.10.0 source changes are committed and pushed in the commit that introduced this checkpoint (see `git log -1`). The previous release commit is `d43a423` (0.9.0).
-- Pushing to `main` runs `tools/check_shaders.sh`, `tools/package.sh`, and then publishes release `v0.10.0` if that tag does not exist yet. A failing check aborts before packaging and release.
+- Published so far: 0.9.0 (`d43a423`) and 0.10.0 (`47be422`, CI job 135831147805, release `v0.10.0` created by the workflow).
+- 0.10.1 in `VERSION`, `pack.mcmeta`, `README.md` and the workflow release notes publishes the audit follow-up below. CI runs the checker and packager first; a failing check stops the release.
 
-## What 0.10.0 changes
 
-- Water: new `shaders/lib/water_waves.glsl` shares world-space analytic surface height and slope between vertex displacement (`shaders/lib/body/opaque.vsh`) and fragment normals (`shaders/lib/water.glsl`). Directional frequencies are 0.48 and 0.73 radians/block; `slope` is scaled in `water.glsl`, with a shorter-scale noise ripple and a broader glint.
-- Vegetation: `shaders/lib/vegetation.glsl` takes `vec3 worldPosition` and returns a continuous, height-dependent wind offset. Terrain and shadow vertex bodies call the same function. Vegetation bending and grass tinting are unverified.
-- Materials: `shaders/block.properties` keeps water at ID 100, extends ID 101 with explicit plant blocks, and maps `minecraft:grass_block` to ID 102. `shaders/lib/body/opaque.vsh` emits `vVegetationBlock`; `shaders/gbuffers_terrain.fsh` enables the matching fragment path in `shaders/lib/body/opaque.fsh`, which adds low-frequency tone variation to vegetation and grass-block top faces and a subtle vegetation backlight term.
-- Clouds: `shaders/lib/sky.glsl` widens `fieldScale` and `detailScale` as `stepLength` grows, blends every horizon sample toward a shared midpoint mass, fades pixel dither, and bounds per-step optical depth with `mix(8.0, 0.90, horizonLod)`. This targets the reported dotted horizon. It is not rendered or validated.
-- Static checker: `tools/check_shaders.sh` checks grass-block ID 102, paired material varyings, the shared water/vegetation paths, terrain and shadow defines, and the cloud horizon LOD and optical-depth bounds.
+## Audit: why the pack still reads as basic
+
+Confirmed by reading the sources, not by rendering:
+
+1. **Cloud sampling, not cloud code, is the limit.** `CLOUD_STEPS` is 4 by default and 3 in POTATO, spread over a slab whose far limit is 6000 blocks. At a low view elevation the four samples are 150-1500 blocks apart, so the field is undersampled by construction. The 0.10.0 horizon LOD blends the samples to one shared broad mass and bounds optical depth, which removes grain but also flattens the band. Detail above roughly six degrees of elevation is still carried by four samples.
+2. **Shadow quality is a budget decision.** One 512/1024 map over 48/96 blocks with four half-texel taps: hard edges, no penumbra variation, no colored shadows. `shadowtex1` is never sampled, so translucent geometry is not excluded.
+3. **No screen-space stage exists.** There is no SSAO, no SSR, no volumetric light and no bloom. `composite.fsh` and `final.fsh` are the only full-screen passes, and water reflects `novaSkyGradient` only, so terrain is never reflected.
+4. **Highlight headroom is off.** The `colortex0Format = RGBA16F` directive in `lib/body/composite.fsh` is commented out, so `colortex0` is 8-bit: the sun disc (peaks near 4.5) and unlit geometry (`EMISSIVE_GAIN` 2.2) clip at 1.0 before the tonemapper.
+5. **Shading runs in display space.** Gbuffers multiply sRGB-encoded texture values by light and the composite decodes once at the end. This is cheap and deliberate, but it compresses midtone contrast and dulls the terminator compared with a linear pipeline.
+6. **Vegetation sway was translating whole quads.** Until this round `novaVegetationOffset` was applied to every vertex of a plant, so a tuft moved sideways as a rigid card instead of bending. Fixed below.
+7. **Textures set the detail ceiling.** The pack ships none; vanilla 16x foliage and stone stay flat regardless of shader work.
+8. **The palette is conservative on purpose.** Ambient is near neutral, fog is restrained, and saturation/exposure default to 1.0.
+
+## What 0.10.1 changes (unverified)
+
+- `shaders/lib/body/opaque.vsh` and `shaders/lib/body/shadow.vsh` declare `in vec4 mc_midTexCoord;` and weight the wind offset by `aboveMid`, a tiny smoothstep band around the sprite's own midpoint. The base of a plant stays planted and only the upper part bends; both passes compute the weight identically so the shadow follows.
+- `shaders/lib/vegetation.glsl` raises the lateral amplitude to `vec2(0.24, 0.14)` now that only the top of a plant moves, and documents the midpoint weighting.
+- `shaders/block.properties` adds an explicit `#else` fallback list of 1.21.5 leaf, plant, flower, sapling and crop blocks, so vegetation selection cannot silently fail on a loader without tag support. Grass blocks stay on ID 102 (top-face tint only, no geometry shear).
+- `tools/check_shaders.sh` checks `mc_midTexCoord` in both passes, the shared `aboveMid` weight, and the explicit leaf fallback list.
+- `README.md` gains a "Why it still looks simpler than large packs" section stating the limits above; the vegetation bullet now describes base-anchored bending.
 
 ## Verification status
 
-- Every item above is a source-level change. No GLSL compile, Minecraft/Iris run, matched visual comparison or frame-time measurement exists for 0.10.0.
-- Locally the checker and packaging script were not run (no shell). CI runs both for this commit; check the workflow result before claiming either passed.
-- A prior hardware-spec browser inspection attempt failed with `ERROR: Stopped.`; no hardware or FPS claims may rest on it.
+- Nothing here was compiled, packaged or rendered. The checker was not run locally; CI runs it for this commit before packaging and release.
+- The previous commits' visual behaviour is also unverified: no screenshot comparison exists for 0.9.0 or 0.10.0.
+- `mc_midTexCoord` is bound by Iris at attribute location 12 (`ProgramCreator`), and the terrain and shadow vertex formats both carry it, so the attribute itself is expected to resolve.
 
 ## Next actions
 
-1. Read the CI result for the 0.10.0 commit. If `Check the shader sources` fails, fix the exact reported invariant and push again; if `Publish release v0.10.0` fails, read the job log before touching `VERSION` or the tag.
-2. Ask the user for matched before/after screenshots on the i3-5005U / HD Graphics 5500: close and distant water, vegetation with its shadows, and the cloud horizon. Ask for `logs/latest.log` if Iris reports a compile error.
-3. Only after an actual in-game comparison: judge whether the horizon LOD removed the grain without flattening the deck, whether the vegetation wind bends rather than slides plants, and whether POTATO is playable. Do not claim visual success or frame rates before that.
-4. Tree structure and grass density remain out of reach for GLSL; if the user still wants those, the answer is a resource pack or world-generation change, not more shader edits.
+1. Read the CI result for the 0.10.1 commit. If `Check the shader sources` fails, fix the reported invariant exactly and push again rather than editing VERSION.
+2. Get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
+3. If more visual quality is wanted, the honest order is: enable RGBA16F for `colortex0`; raise `CLOUD_STEPS` on anything faster than the HD 5500; then add a compact SSAO in `composite.fsh`. Each needs an in-game comparison before it can be called an improvement.
+4. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.

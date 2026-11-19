@@ -171,9 +171,18 @@ if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" 
     fail "water vertex displacement and fragment slope must share the analytic wave field"
 fi
 if ! grep -qF 'vec2 novaVegetationOffset(vec3 worldPosition)' "$shaders/lib/vegetation.glsl" ||
-   ! grep -qF 'novaVegetationOffset(worldPos)' "$shaders/lib/body/opaque.vsh" ||
-   ! grep -qF 'novaVegetationOffset(worldPos)' "$shaders/lib/body/shadow.vsh"; then
-    fail "terrain and shadow passes must use the shared world-space vegetation field"
+   ! grep -qF 'novaVegetationOffset(worldPos) * aboveMid' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'novaVegetationOffset(worldPos) * aboveMid' "$shaders/lib/body/shadow.vsh"; then
+    fail "terrain and shadow passes must use the shared world-space vegetation field, weighted by sprite height"
+fi
+if ! grep -qF 'in vec4 mc_midTexCoord;' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'in vec4 mc_midTexCoord;' "$shaders/lib/body/shadow.vsh" ||
+   ! grep -qF 'smoothstep(mc_midTexCoord.y - 1.0e-4,' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'smoothstep(mc_midTexCoord.y - 1.0e-4,' "$shaders/lib/body/shadow.vsh"; then
+    fail "vegetation sway must anchor vertices at the sprite base with mc_midTexCoord in both passes"
+fi
+if ! grep -qF 'minecraft:oak_leaves' "$block_props"; then
+    fail "shaders/block.properties: vegetation needs an explicit leaf fallback list"
 fi
 for entry in gbuffers_water.vsh gbuffers_water.fsh; do
     if ! grep -qF '#define NOVA_WATER_MATERIAL_ID' "$shaders/$entry"; then

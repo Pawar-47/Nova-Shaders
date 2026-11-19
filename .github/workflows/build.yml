@@ -63,7 +63,7 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.10.0
+          ## Nova Shaders 0.10.1
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
           The target is an Intel Core i3-5005U with Intel HD Graphics 5500, but appearance and
@@ -72,14 +72,17 @@ jobs:
 
           ### Highlights
 
-          - A shared, higher-frequency world-space wave field drives mapped water displacement and
-            analytic surface normals; WATER_WAVE_HEIGHT controls the effect.
-          - Iris block ID 101 selects vegetation for a continuous height-varying wind field shared
-            by terrain and shadow passes. Block ID 102 maps grass blocks for top-face colour variation.
-          - Cloud rays fade pixel jitter, blend to a shared broad horizon field and bound per-step
-            optical depth to reduce horizon undersampling artifacts.
-          - POTATO is the suggested starting preset for the target GPU: three cloud samples and a
-            512-pixel shadow map with a 48-block range. This is guidance, not a benchmark result.
+          - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
+            plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
+            bends the cast shadow by the identical weight.
+          - block.properties keeps the Iris tag form and adds an explicit 1.21.5 leaf, plant,
+            flower, sapling and crop fallback list, so the vegetation block ID cannot silently go
+            unassigned on a loader without tag support.
+          - Block ID 102 keeps grass blocks on top-face colour variation only; full cubes are not
+            sheared by the wind.
+          - The README now records this pipeline's ceilings - four cloud samples over a long slab,
+            four shadow taps, no SSAO or bloom, an 8-bit colour buffer, display-space shading and
+            vanilla 16x textures - so a look difference is not mistaken for a missing option.
 
           ### Not benchmarked
 
@@ -89,9 +92,9 @@ jobs:
 
           ### Worth testing first
 
-          Compare matched scenes for water movement and reflection, vegetation bending and shadows,
-          and cloud detail at the horizon; also check cloud edges at noon and sunset, translucent
-          entities, rain, the Nether, and performance on the target GPU.
+          One grass tuft and one leaf block close up, to see whether they bend rather than shear and
+          whether the shadow keeps up; then a grass field, the cloud horizon, translucent entities,
+          rain, the Nether, and performance on the target GPU.
           NOTES
 
           gh release create "$tag" \

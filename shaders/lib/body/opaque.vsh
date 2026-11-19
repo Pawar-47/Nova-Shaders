@@ -26,6 +26,12 @@ out vec3 vPlayerPos;
 in vec2 mc_Entity;
 #endif
 
+#ifdef NOVA_VEGETATION_SWAY
+/* Iris attribute 12. Its y component is the vertical middle of the sprite the
+   vertex belongs to, so the sway below can anchor a plant at its base. */
+in vec4 mc_midTexCoord;
+#endif
+
 #ifdef NOVA_WATER_MATERIAL_ID
 flat out float vWaterBlock;
 #endif
@@ -56,8 +62,15 @@ void main() {
 #ifdef NOVA_VEGETATION_SWAY
     vVegetationBlock = mc_Entity.x;
     if (mc_Entity.x == 101.0) {
+        // Only the part of the sprite above its own middle bends. The base of a
+        // plant quad stays planted, so the plant leans in the wind instead of
+        // sliding across the ground as a rigid block. The shadow pass uses the
+        // same test, or the cast shadow would detach from the plant.
+        float aboveMid = smoothstep(mc_midTexCoord.y - 1.0e-4,
+                                    mc_midTexCoord.y + 1.0e-4,
+                                    gl_MultiTexCoord0.y);
         vec3 worldPos = cameraPosition + playerPos;
-        vec2 offset = novaVegetationOffset(worldPos);
+        vec2 offset = novaVegetationOffset(worldPos) * aboveMid;
         viewPos.xyz += mat3(gbufferModelView) * vec3(offset.x, 0.0, offset.y);
     }
 #endif
