@@ -44,11 +44,16 @@ void main() {
         vec3 worldPos = cameraPosition + vPlayerPos;
         float patchTone = valueNoise(worldPos.xz * 0.24 + vec2(worldPos.y * 0.015));
         float variation = mix(0.90, 1.10, patchTone);
+        // A restrained warm/cool shift breaks up a uniform canopy while leaving
+        // the biome tint from the vertex colour in charge of the actual species hue.
+        vec3 foliageTint = mix(vec3(0.96, 1.03, 0.94),
+                               vec3(1.04, 0.98, 0.90), patchTone);
         float coverage = 1.0;
         if (vVegetationBlock > 101.5) {
             coverage = smoothstep(0.65, 0.90, normalize(vNormal).y);
         }
         albedo.rgb *= mix(1.0, variation, coverage);
+        albedo.rgb *= mix(vec3(1.0), foliageTint, coverage * 0.55);
     }
 #endif
 
@@ -89,7 +94,9 @@ void main() {
 #ifdef NOVA_VEGETATION_SWAY
     if (vVegetationBlock > 100.5 && vVegetationBlock < 101.5) {
         float backlit = max(dot(-normal, sky.lightDir), 0.0) * sky.day;
-        colour += albedo.rgb * vec3(0.025, 0.10, 0.015)
+        vec3 transmissionTint = mix(vec3(0.025, 0.10, 0.015),
+                                    vec3(0.13, 0.075, 0.035), sky.sunset);
+        colour += albedo.rgb * transmissionTint
                 * backlit * SUN_STRENGTH * (0.35 + 0.65 * shadow);
     }
 #endif
