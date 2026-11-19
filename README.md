@@ -16,7 +16,7 @@ An optional **Nova Natural Foliage Lite** companion resource pack is built separ
 from the shader ZIP. It adds a single randomized angled leaf plane to vanilla leaf
 blocks, three-plane small grass/shrub models and a small grass-block side fringe to soften cube-shaped canopies and turf edges.
 It is experimental, adds geometry/overdraw, and should only be enabled if forest-scene
-FPS remains acceptable. It does not alter tree generation or tall-grass/shrub models.
+FPS remains acceptable. It does not alter tree generation, branch placement, tall-grass/large-fern models or biome vegetation density.
 
 ## What changed in 0.10.2
 
