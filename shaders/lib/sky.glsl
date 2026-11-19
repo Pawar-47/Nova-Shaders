@@ -132,8 +132,8 @@ vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
  * by the top only the tallest peaks survive, so the crowns break into separate
  * rounded puffs. The union of those silhouettes is what reads as fluffy.
  *
- * There is no domain warping. Warping a noise field every frame is exactly what
- * makes clouds shear, swim and look distorted.
+ * A fixed anisotropic transform stretches the cloud islands into broad, uneven
+ * masses without animated domain warping, which would make them shear and swim.
  */
 float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind,
                          float fieldScale, float detailAmount,
@@ -231,8 +231,8 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     // The horizon intersects thousands of blocks of cloud slab. Fade to a broad,
     // low-frequency field before the fixed sample budget can turn it into dots.
     float horizonLod = smoothstep(30.0, 150.0, stepLength);
-    float fieldScale = mix(0.0030, 0.0010, horizonLod);
-    float detailScale = mix(0.0140, 0.0008, horizonLod);
+    float fieldScale = mix(0.0060, 0.0012, horizonLod);
+    float detailScale = mix(0.0180, 0.0010, horizonLod);
 
     // The fine detail is sampled once, midway; it only has to rag the threshold, it
     // does not have to travel with every step.
