@@ -224,6 +224,10 @@ fi
 
 section "water opacity and cloud shape"
 
+if ! grep -qF 'if (distanceSquared < 72.0 * 72.0)' "$shaders/lib/water.glsl" ||
+   ! grep -qF 'valueNoiseGradient(p * 0.42' "$shaders/lib/water.glsl"; then
+    fail "high-frequency water noise must be evaluated only inside its 72-block distance range"
+fi
 if ! grep -qF 'float depthAlpha = max(0.82, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
     fail "horizontal water must retain a tinted translucent body instead of becoming clear"
 fi
