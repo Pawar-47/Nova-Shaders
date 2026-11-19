@@ -113,5 +113,6 @@ jobs:
 
           gh release create "$tag" \
             "build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip" \
+            "build/nova-natural-foliage-${{ steps.version.outputs.value }}.zip" \
             --title "Nova Shaders $tag" \
             --notes-file "$notes"
