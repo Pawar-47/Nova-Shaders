@@ -53,9 +53,9 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 
 ## Verification status
 
-- GitHub Actions run `44614644080` passed on commit `94132d5`: shader source checks, optional foliage JSON/reference checks, packaging of both ZIPs, and upload of both artifacts all succeeded. The release step was correctly skipped on the pull-request branch.
+- GitHub Actions run `44615381913` passed on commit `6089f2c`: shader source checks, optional foliage JSON/reference checks, packaging of both ZIPs, and upload of both artifacts all succeeded. The two artifacts are `nova-shaders-0.10.2` and `nova-natural-foliage-0.10.2`; the release step was correctly skipped on the pull-request branch.
 - This is static validation and archive packaging only. The shaders have not been compiled by a GLSL driver, loaded in Iris, rendered in Minecraft, or benchmarked on the Intel HD 5500.
-- The release-notes duplicate was removed in a later documentation-only commit; recheck CI against the current branch head before treating that exact head as validated.
+- The denser overhead cloud field (0.040 near-view scale and 0.080 detail scale) and matching source-check assertion are included in this passing run.
 - The previous commits' visual behaviour is also unverified: no screenshot comparison exists for 0.9.0 or 0.10.0.
 - `mc_midTexCoord` is bound by Iris at attribute location 12 (`ProgramCreator`), and the terrain and shadow vertex formats both carry it, so the attribute itself is expected to resolve.
 
