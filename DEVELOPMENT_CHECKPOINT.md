@@ -52,12 +52,15 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 
 ## Verification status
 
-- Nothing here was compiled, packaged or rendered. The checker was not run locally; CI runs it for this commit before packaging and release.
+- GitHub Actions run `44614644080` passed on commit `94132d5`: shader source checks, optional foliage JSON/reference checks, packaging of both ZIPs, and upload of both artifacts all succeeded. The release step was correctly skipped on the pull-request branch.
+- This is static validation and archive packaging only. The shaders have not been compiled by a GLSL driver, loaded in Iris, rendered in Minecraft, or benchmarked on the Intel HD 5500.
+- The release-notes duplicate was removed in a later documentation-only commit; recheck CI against the current branch head before treating that exact head as validated.
 - The previous commits' visual behaviour is also unverified: no screenshot comparison exists for 0.9.0 or 0.10.0.
 - `mc_midTexCoord` is bound by Iris at attribute location 12 (`ProgramCreator`), and the terrain and shadow vertex formats both carry it, so the attribute itself is expected to resolve.
 
 ## Next actions
 
-1. Install the PR build on Linux Mint and get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
-3. Test the optional `Nova Natural Foliage Lite` companion pack against vanilla leaves and common texture packs; benchmark forest FPS before recommending it. It adds one extra plane per leaf block and may increase overdraw.
-4. Do not merge or claim visual success until the shader has been loaded in Iris on the target Linux Mint machine. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.
+1. Install the PR build on Linux Mint and capture matched screenshots on the target machine: a close plant (bend and shadow alignment), leaf blocks/canopies, a grass field, shallow and deep water, overhead clouds, and the horizon.
+2. Test the optional `Nova Natural Foliage Lite` pack with vanilla and common texture packs; benchmark forest FPS before recommending it. It adds one extra plane per leaf block and may increase overdraw.
+3. After screenshots and FPS are available, tune cloud density/coverage and water alpha against those observations rather than guessing from source math.
+4. Do not merge or claim visual success until the shader has been loaded in Iris on the target Linux Mint machine. Tree structure and grass density remain outside GLSL; they require resource-pack models or world-generation changes.
