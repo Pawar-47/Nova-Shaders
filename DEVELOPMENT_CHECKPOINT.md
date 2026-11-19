@@ -12,9 +12,10 @@ Last updated: 0.10.2 branch (natural cloud and water refinements; visual verific
 
 ## Repository state
 
-- Repository: `https://github.com/Pawar-47/Nova-Shaders.git`, branch `main`, tracking `origin/main`.
-- Published so far: 0.9.0 (`d43a423`) and 0.10.0 (`47be422`, CI job 135831147805, release `v0.10.0` created by the workflow).
-- 0.10.1 in `VERSION`, `pack.mcmeta`, `README.md` and the workflow release notes publishes the audit follow-up below. CI runs the checker and packager first; a failing check stops the release.
+- Repository: `https://github.com/Pawar-47/Nova-Shaders.git`.
+- `main` was at `a7bf008` (v0.10.1) when this work started. Active work branch: `natural-visuals-0.10.2`; pull request: `https://github.com/Pawar-47/Nova-Shaders/pull/1`.
+- v0.10.2 is proposed on the PR branch and is not yet merged or released. The PR workflow run `44612327841` completed successfully: static shader checks, packaging and artifact upload passed. The release step was correctly skipped because this is a pull request.
+- The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No new third-party code was copied; Glimmer and Spectrum remain the only documented source adaptations.
 
 
 ## Audit: why the pack still reads as basic
@@ -55,7 +56,6 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 
 ## Next actions
 
-1. Read the CI result for the 0.10.2 commit. If `Check the shader sources` fails, fix the reported invariant exactly and push again rather than editing VERSION.
-2. Get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
-3. If more visual quality is wanted, the honest order is: enable RGBA16F for `colortex0`; raise `CLOUD_STEPS` on anything faster than the HD 5500; then add a compact SSAO in `composite.fsh`. Each needs an in-game comparison before it can be called an improvement.
-4. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.
+1. Install the PR build on Linux Mint and get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
+3. Continue the optional foliage companion pack using only MIT-cleared assets/models after compatibility and model-cost checks; see `VISUAL-RESEARCH.md`.
+4. Do not merge or claim visual success until the shader has been loaded in Iris on the target Linux Mint machine. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.
