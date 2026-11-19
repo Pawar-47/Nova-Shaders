@@ -62,8 +62,17 @@ for state_path in blockstates:
 
 grass_state = read_json(ROOT / "assets/minecraft/blockstates/grass_block.json")
 grass_model = read_json(ROOT / "assets/minecraft/models/block/grass_block.json")
-if not grass_state or grass_state.get("variants", {}).get("", {}).get("model") != "minecraft:block/grass_block":
-    fail("grass_block blockstate must point to the companion grass-block model")
+if grass_state:
+    grass_variants = grass_state.get("variants", {})
+    grass_rotations = grass_variants.get("snowy=false")
+    if not isinstance(grass_rotations, list) or len(grass_rotations) != 4:
+        fail("grass_block snowy=false must keep four randomized fringe-model rotations")
+    else:
+        for variant in grass_rotations:
+            if variant.get("model") != "minecraft:block/grass_block":
+                fail("grass_block snowy=false must use the companion grass-block model")
+    if grass_variants.get("snowy=true", {}).get("model") != "minecraft:block/grass_block_snow":
+        fail("grass_block snowy=true must retain Minecraft's vanilla snow-covered model")
 if grass_model:
     if len(grass_model.get("elements", [])) != 2:
         fail("grass_block model must contain the vanilla cube and one edge-fringe overlay")
@@ -88,8 +97,13 @@ for tint_mode in ("tinted", "untinted"):
 for name, tint_mode in plant_species.items():
     state = read_json(ROOT / f"assets/minecraft/blockstates/{name}.json")
     model = read_json(ROOT / f"assets/minecraft/models/block/{name}.json")
-    if not state or not isinstance(state.get("variants", {}).get(""), list) or len(state["variants"][""]) != 4:
+    plant_rotations = state.get("variants", {}).get("") if state else None
+    if not isinstance(plant_rotations, list) or len(plant_rotations) != 4:
         fail(f"{name}.json blockstate must offer four horizontal rotations")
+    else:
+        for variant in plant_rotations:
+            if variant.get("model") != f"minecraft:block/{name}":
+                fail(f"{name}.json blockstate references an unexpected model")
     if model:
         if model.get("parent") != f"nova:block/natural_plant_{tint_mode}":
             fail(f"{name}.json must inherit the {tint_mode} plant model")
@@ -108,4 +122,4 @@ for model_path in models:
 
 if errors:
     raise SystemExit(1)
-print(f"validated {len(blockstates)} vanilla leaf models and their resource references")
+print(f"validated {len(blockstates)} vanilla leaf models, {len(plant_species)} plant models, and grass-block variants")
