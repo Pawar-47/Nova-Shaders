@@ -38,7 +38,7 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 
 - PR #2: https://github.com/Pawar-47/Nova-Shaders/pull/2 — shader-only cleanup, per-leaf vertex wind and water distance gating. Working branch: `shader-only-research`.
 - Next release version prepared: v0.10.4. The v0.10.2 and v0.10.3 release pages still retain their historical companion ZIP assets.
-- Latest implementation checkpoint before this note: `946947648643749254e0003c71a7cb6e6889c0a9` (includes the latest main checkpoint as a merge parent).
+- The PR head is the authoritative current revision; use the head SHA shown on PR #2 rather than a copied SHA in this note. It includes the latest main checkpoint as a merge parent.
 - The PR currently has no reported status checks / Actions run. The repository connector did not trigger the PR workflow, and a local clone attempt could not resolve github.com, so the changed checker and packaging script have not been executed in this environment.
 - Existing static shader checks and archive packaging have passed in previous runs.
 - No GLSL driver compilation, Iris 1.8.x in-game render validation, target-machine screenshots or FPS benchmark has been performed. Do not merge or release this branch until its source checks and packaging have actually run.
