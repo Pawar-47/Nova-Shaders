@@ -17,7 +17,9 @@ Nova is distributed as a single shader pack. All visual work—including water, 
 ## What changed in 0.10.3
 
 - The release is now shader-only: CI builds and publishes one Iris shader ZIP. Companion resource-pack sources, validation and packaging are excluded.
-- Continued focus is on natural-looking foliage through shader-side shading and vertex animation, plus lightweight water and cloud improvements. Vanilla block geometry and world generation remain outside the shader's control.
+- Leaves now have a separate shader material ID and a low-amplitude, continuous world-space vertex wind field. A slow canopy sway is layered with tiny per-vertex flutter; motion fades with distance and the same displacement is applied in the shadow pass.
+- Ground plants retain their sprite-midpoint hinge, separate from leaf-block motion. This is shader-only and does not add geometry or change vanilla models.
+- Continued focus is on lightweight water and cloud improvements. Vanilla block geometry and world generation remain outside the shader's control.
 
 This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
 
@@ -28,7 +30,7 @@ This patch does not claim visual or FPS validation; the target-hardware test pla
 - **Foliage shading is less uniform.** Leaves and plants receive restrained warm/cool patch variation and a sunset-aware backlight while the original biome tint remains dominant. Grass-block top faces receive the same variation without moving the block geometry.
 - **Target defaults are lighter.** The default shadow map is reduced from 1024 to 512 and shadow distance from 96 to 64 blocks for the Intel HD 5500 target. The 1024 option remains available for sharper shadows. A new PERFORMANCE preset disables the actual Iris shadow render pass and FXAA, while keeping clouds and water enabled.
 
-These are source-level adjustments. Cloud count, water appearance and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit, and [TARGET-TEST-PLAN.md](TARGET-TEST-PLAN.md) for the repeatable HD 5500 visual/FPS comparison procedure.
+These are source-level adjustments. Cloud count, water appearance, leaf motion and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit, and [TARGET-TEST-PLAN.md](TARGET-TEST-PLAN.md) for the repeatable HD 5500 visual/FPS comparison procedure.
 
 ## What changed in 0.10.1
 
