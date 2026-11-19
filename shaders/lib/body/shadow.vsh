@@ -20,8 +20,8 @@ void main() {
 #ifdef NOVA_VEGETATION_SWAY
     if (mc_Entity.x == 101.0) {
         vec3 playerPos = (shadowModelViewInverse * shadowPos).xyz;
-        vec2 worldXZ = cameraPosition.xz + playerPos.xz;
-        vec2 offset = novaVegetationOffset(worldXZ);
+        vec3 worldPos = cameraPosition + playerPos;
+        vec2 offset = novaVegetationOffset(worldPos);
         shadowPos.xyz += mat3(shadowModelView) * vec3(offset.x, 0.0, offset.y);
     }
 #endif

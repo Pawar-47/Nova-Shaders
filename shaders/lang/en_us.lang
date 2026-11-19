@@ -78,4 +78,4 @@ value.COLOR_DITHER.1=On
 # ------------------------------------------------------------------ Presets -
 profile.DEFAULT=Default
 profile.POTATO=Potato
-profile.comment=DEFAULT uses the full settings. POTATO keeps clouds and shadows at lower quality; turn them off manually if integrated graphics still struggles.
+profile.comment=Start with POTATO on an Intel HD Graphics 5500. It keeps clouds and shadows at lower quality; turn them off manually if performance is poor.

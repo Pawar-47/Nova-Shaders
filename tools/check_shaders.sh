@@ -11,7 +11,8 @@
 #   * preprocessor conditionals balance in every file
 #   * options used by shaders.properties exist in the shaders and have a label
 #     in shaders/lang/en_us.lang
-#   * water and vegetation block mappings agree with their shader interfaces
+#   * water, vegetation and grass mappings agree with their shader interfaces
+#   * the cloud horizon LOD blends fields and bounds per-step optical depth
 #   * pack.mcmeta is valid JSON and VERSION is a plain version number
 
 set -uo pipefail
@@ -109,7 +110,7 @@ while IFS= read -r file; do
     fi
 done < <(find "$shaders/lib" -type f | sort)
 
-section "material mappings"
+section "material mappings and shader paths"
 
 block_props="$shaders/block.properties"
 if [ -f "$block_props" ]; then
@@ -124,6 +125,14 @@ if [ -f "$block_props" ]; then
             fail "shaders/block.properties: vegetation mapping is missing %minecraft:$tag"
         fi
     done
+    for plant in minecraft:short_grass minecraft:tall_grass minecraft:fern minecraft:large_fern minecraft:dead_bush minecraft:seagrass minecraft:tall_seagrass; do
+        if ! grep -qF "$plant" "$block_props"; then
+            fail "shaders/block.properties: vegetation mapping is missing $plant"
+        fi
+    done
+    if ! grep -qE '^[[:space:]]*block\.102[[:space:]]*=[[:space:]]*minecraft:grass_block([[:space:]]|$)' "$block_props"; then
+        fail "shaders/block.properties: block ID 102 must map to minecraft:grass_block"
+    fi
 fi
 
 if ! grep -qF 'in vec2 mc_Entity;' "$shaders/lib/body/opaque.vsh"; then
@@ -146,16 +155,55 @@ if ! grep -qF 'flat out float vWaterBlock;' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF 'flat in float vWaterBlock;' "$shaders/lib/body/water.fsh"; then
     fail "water material ID varying is not paired between vertex and fragment bodies"
 fi
+if ! grep -qF 'flat out float vVegetationBlock;' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'flat in float vVegetationBlock;' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'vVegetationBlock = mc_Entity.x;' "$shaders/lib/body/opaque.vsh"; then
+    fail "vegetation material ID varying is not paired between terrain stages"
+fi
+if ! grep -qF 'if (vVegetationBlock > 100.5)' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'if (vVegetationBlock > 101.5)' "$shaders/lib/body/opaque.fsh"; then
+    fail "terrain shading does not distinguish vegetation from grass-block ID 102"
+fi
+if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/water.glsl" ||
+   ! grep -qF 'float novaWaterSurfaceHeight(vec2 worldXZ)' "$shaders/lib/water_waves.glsl" ||
+   ! grep -qF 'vec2 novaWaterSurfaceSlope(vec2 worldXZ)' "$shaders/lib/water_waves.glsl"; then
+    fail "water vertex displacement and fragment slope must share the analytic wave field"
+fi
+if ! grep -qF 'vec2 novaVegetationOffset(vec3 worldPosition)' "$shaders/lib/vegetation.glsl" ||
+   ! grep -qF 'novaVegetationOffset(worldPos)' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'novaVegetationOffset(worldPos)' "$shaders/lib/body/shadow.vsh"; then
+    fail "terrain and shadow passes must use the shared world-space vegetation field"
+fi
 for entry in gbuffers_water.vsh gbuffers_water.fsh; do
     if ! grep -qF '#define NOVA_WATER_MATERIAL_ID' "$shaders/$entry"; then
         fail "$entry does not enable the water material ID path"
     fi
 done
-for entry in gbuffers_terrain.vsh shadow.vsh; do
+for entry in gbuffers_terrain.vsh gbuffers_terrain.fsh shadow.vsh; do
     if ! grep -qF '#define NOVA_VEGETATION_SWAY' "$shaders/$entry"; then
-        fail "$entry does not enable vegetation sway"
+        fail "$entry does not enable vegetation sway in both terrain stages and shadows"
     fi
 done
+
+section "cloud horizon stability"
+
+sky="$shaders/lib/sky.glsl"
+if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" ||
+   ! grep -qF 'mass = mix(mass, horizonMass, horizonBlend);' "$sky"; then
+    fail "cloud march does not blend to a stable low-frequency horizon field"
+fi
+if ! grep -qF 'float horizonMass = valueNoise(midPoint * fieldScale + wind);' "$sky" ||
+   ! grep -qF '1.0 - horizonLod, horizonMass, horizonLod' "$sky"; then
+    fail "cloud horizon density is not shared across the ray-march samples"
+fi
+if ! grep -qF 'float opticalDepthLimit = mix(8.0, 0.90, horizonLod);' "$sky" ||
+   ! grep -qF 'opticalDepth = min(opticalDepth, opticalDepthLimit);' "$sky"; then
+    fail "cloud ray-march optical depth is not bounded at the horizon"
+fi
+if ! grep -qF 'float jitter = novaDither(gl_FragCoord.xy) * (1.0 - horizonLod);' "$sky"; then
+    fail "cloud pixel jitter must fade out through the horizon LOD"
+fi
 
 section "preprocessor balance"
 

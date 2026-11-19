@@ -63,36 +63,35 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.9.0
+          ## Nova Shaders 0.10.0
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
-          The exact target GPU and performance have not been verified. MIT-licensed adaptations
-          from Glimmer and Spectrum are documented in THIRD-PARTY-NOTICES.txt.
+          The target is an Intel Core i3-5005U with Intel HD Graphics 5500, but appearance and
+          performance have not been verified on that hardware. MIT-licensed adaptations from
+          Glimmer and Spectrum are documented in THIRD-PARTY-NOTICES.txt.
 
           ### Highlights
 
-          - Iris block ID 100 enables low-amplitude vertex displacement on water, alongside the
-            animated wave normal and depth-based water body. WATER_WAVE_HEIGHT controls both.
-          - Iris tag ID 101 adds gentle world-anchored sway to leaves, flowers, saplings and crops;
-            the same offset is used by the shadow pass.
-          - Cloud coverage and absorption are stronger, with four cloud samples by default.
-            POTATO keeps clouds and shadows enabled at three samples and a 512-pixel shadow map
-            with a 48-block range; both can still be disabled manually for performance.
-          - Daylight direct light and sky/ground ambient contrast are stronger; separate red, green
-            and blue controls remain available in the Color settings.
-          - Terrain cutouts retain distance-faded alpha-coverage dithering, matched in the shadow pass.
+          - A shared, higher-frequency world-space wave field drives mapped water displacement and
+            analytic surface normals; WATER_WAVE_HEIGHT controls the effect.
+          - Iris block ID 101 selects vegetation for a continuous height-varying wind field shared
+            by terrain and shadow passes. Block ID 102 maps grass blocks for top-face colour variation.
+          - Cloud rays fade pixel jitter, blend to a shared broad horizon field and bound per-step
+            optical depth to reduce horizon undersampling artifacts.
+          - POTATO is the suggested starting preset for the target GPU: three cloud samples and a
+            512-pixel shadow map with a 48-block range. This is guidance, not a benchmark result.
 
           ### Not benchmarked
 
           The sources have not been GPU-compiled, visually checked in Minecraft, or benchmarked.
-          The static checker does not establish GPU compatibility or performance. No frame-rate
+          The static checker does not establish GPU compatibility or visual quality. No frame-rate
           claims are made.
 
           ### Worth testing first
 
-          Water surface movement and reflections near and far; vegetation motion and matching
-          shadows; cloud edges and shading at noon and sunset; translucent entities, rain, and the
-          Nether; and performance on the exact target GPU.
+          Compare matched scenes for water movement and reflection, vegetation bending and shadows,
+          and cloud detail at the horizon; also check cloud edges at noon and sunset, translucent
+          entities, rain, the Nether, and performance on the target GPU.
           NOTES
 
           gh release create "$tag" \

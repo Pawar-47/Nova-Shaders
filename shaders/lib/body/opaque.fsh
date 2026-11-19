@@ -16,6 +16,9 @@ in vec2 vLightCoord;
 in vec4 vTint;
 in vec3 vNormal;
 in vec3 vPlayerPos;
+#ifdef NOVA_VEGETATION_SWAY
+flat in float vVegetationBlock;
+#endif
 
 /* Everything this pack needs lives in one colour buffer. Saying so keeps the
    other seven attachments unbound, which is worth real milliseconds on an
@@ -35,6 +38,19 @@ void main() {
     vec4 albedo = vTint;
 #else
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
+
+#ifdef NOVA_VEGETATION_SWAY
+    if (vVegetationBlock > 100.5) {
+        vec3 worldPos = cameraPosition + vPlayerPos;
+        float patchTone = valueNoise(worldPos.xz * 0.24 + vec2(worldPos.y * 0.015));
+        float variation = mix(0.90, 1.10, patchTone);
+        float coverage = 1.0;
+        if (vVegetationBlock > 101.5) {
+            coverage = smoothstep(0.65, 0.90, normalize(vNormal).y);
+        }
+        albedo.rgb *= mix(1.0, variation, coverage);
+    }
+#endif
 
 #ifndef NOVA_TRANSLUCENT_ENTITIES
 #ifdef NOVA_ALPHA_COVERAGE
@@ -70,6 +86,13 @@ void main() {
 #endif
 
     colour = applyLighting(albedo.rgb, normal, vLightCoord, shadow, sky);
+#ifdef NOVA_VEGETATION_SWAY
+    if (vVegetationBlock > 100.5 && vVegetationBlock < 101.5) {
+        float backlit = max(dot(-normal, sky.lightDir), 0.0) * sky.day;
+        colour += albedo.rgb * vec3(0.025, 0.10, 0.015)
+                * backlit * SUN_STRENGTH * (0.35 + 0.65 * shadow);
+    }
+#endif
 #endif
 
 #ifndef NOVA_HAND

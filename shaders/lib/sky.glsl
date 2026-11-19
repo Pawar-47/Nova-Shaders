@@ -135,14 +135,16 @@ vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
  * There is no domain warping. Warping a noise field every frame is exactly what
  * makes clouds shear, swim and look distorted.
  */
-float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind) {
-    // One octave for the mass, at roughly seventy blocks per cell.
-    vec2 p = worldXZ * 0.0143 + wind;
+float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind,
+                         float fieldScale, float detailAmount,
+                         float horizonMass, float horizonBlend) {
+    // Near the horizon, broaden and stabilize the field across the short march.
+    vec2 p = worldXZ * fieldScale + wind;
     float mass = valueNoise(p);
+    mass = mix(mass, horizonMass, horizonBlend);
 
-    // A weak, faster field for rag on the edges. Kept weak on purpose: a heavy
-    // detail term chews the silhouette up.
-    mass += (detail - 0.5) * 0.10;
+    // A weak detail field rags the edges only while the ray has enough samples.
+    mass += (detail - 0.5) * 0.10 * detailAmount;
 
     float threshold = mix(0.62, 0.38, saturate(CLOUD_COVERAGE)) + smoothstep(0.18, 1.0, g) * 0.30;
     float density = saturate((mass - threshold) * 1.8);
@@ -222,13 +224,21 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     vec2 wind = vec2(frameTimeCounter * 0.0200, frameTimeCounter * 0.0080);
     float stepLength = (tFar - tNear) / float(CLOUD_STEPS);
 
-    // The fine detail is sampled once, midway: it only has to rag the threshold, it
+    // The horizon intersects thousands of blocks of cloud slab. Fade to a broad,
+    // low-frequency field before the fixed sample budget can turn it into dots.
+    float horizonLod = smoothstep(30.0, 150.0, stepLength);
+    float fieldScale = mix(0.0143, 0.00055, horizonLod);
+    float detailScale = mix(0.0600, 0.0006, horizonLod);
+
+    // The fine detail is sampled once, midway; it only has to rag the threshold, it
     // does not have to travel with every step.
     vec2 midPoint = cameraPosition.xz + direction.xz * (tNear + tFar) * 0.5;
-    float detail = valueNoise(midPoint * 0.0600 + wind);
+    float horizonMass = valueNoise(midPoint * fieldScale + wind);
+    float detail = valueNoise(midPoint * detailScale + wind);
 
-    // Ordered dither on the first sample so the steps read as grain, not as rings.
-    float t = tNear + stepLength * (novaDither(gl_FragCoord.xy) + 0.5);
+    // Ordered dither helps hide march bands in the body, but is suppressed at the horizon.
+    float jitter = novaDither(gl_FragCoord.xy) * (1.0 - horizonLod);
+    float t = tNear + stepLength * (jitter + 0.5);
 
     // Evaluate the phase only if this ray encounters cloud density; most empty
     // sky rays then avoid the inverse-square-root cost entirely.
@@ -244,7 +254,8 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
         float g = saturate((sampleY - baseY) / slabThickness);
 
         vec2 p = cameraPosition.xz + direction.xz * t;
-        float density = novaCloudDensityAt(p, g, detail, wind);
+        float density = novaCloudDensityAt(p, g, detail, wind, fieldScale,
+                                            1.0 - horizonLod, horizonMass, horizonLod);
 
         if (density > 0.004) {
             if (!scatteringComputed) {
@@ -258,7 +269,10 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
             heightLight *= 1.0 - density * 0.42;
             heightLight = mix(heightLight, 1.0, scattering * 0.65);
 
-            float absorb = 1.0 - exp(-density * stepLength * 0.075);
+            float opticalDepth = density * stepLength * 0.075;
+            float opticalDepthLimit = mix(8.0, 0.90, horizonLod);
+            opticalDepth = min(opticalDepth, opticalDepthLimit);
+            float absorb = 1.0 - exp(-opticalDepth);
             lit += heightLight * absorb * transmittance;
             absorbed += absorb * transmittance;
             transmittance *= 1.0 - absorb;

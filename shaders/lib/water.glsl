@@ -3,6 +3,7 @@
 
 #include "/lib/util.glsl"
 #include "/lib/sky.glsl"
+#include "/lib/water_waves.glsl"
 
 /* Water surface.
  *
@@ -12,12 +13,6 @@
  * value-noise detail octave keep the surface moving without the source's
  * sixteen-octave loop or three complete height evaluations per pixel.
  */
-float novaWaterWaveSlope(vec2 position, vec2 direction, float frequency, float phase, float amplitude) {
-    float angle = mod(dot(direction, position) * frequency + phase, NOVA_TAU);
-    float wave = exp(sin(angle) - 1.0) * 0.5;
-    return wave * cos(angle) * frequency * amplitude;
-}
-
 vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 #if WATER_WAVES == 0
     return geometricNormal;
@@ -29,18 +24,14 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
     float time = frameTimeCounter;
     float viewDistance = length(worldPos - cameraPosition);
 
-    const vec2 directionA = vec2(0.894427, 0.447214);
-    const vec2 directionB = vec2(-0.371391, 0.928477);
-    float swellA = novaWaterWaveSlope(p, directionA, 0.075, time * 0.42, 1.25);
-    float swellB = novaWaterWaveSlope(p, directionB, 0.118, -time * 0.31, 0.72);
+    // The shared analytic slope matches the higher-frequency vertex displacement.
+    // A short-scale noise ripple adds moving detail between Minecraft's sparse vertices.
+    float fineFade = 1.0 - saturate(viewDistance / 72.0);
+    vec3 chop = valueNoiseGradient(p * 0.42 + vec2(time * 0.18, -time * 0.14));
 
-    // The finest octave fades out with distance to avoid aliased far-water detail.
-    float fineFade = 1.0 - saturate(viewDistance / 80.0);
-    vec3 chop = valueNoiseGradient(p * 0.125 + vec2(time * 0.10, -time * 0.10));
-
-    vec2 slope = directionA * swellA + directionB * swellB + chop.yz * 0.030 * fineFade;
-    // The extra scale makes normal motion legible at ordinary viewing angles.
-    slope *= WATER_WAVE_HEIGHT * 2.0 * (1.0 + saturate(rainStrength) * 0.25);
+    vec2 slope = novaWaterSurfaceSlope(p) * 1.8;
+    slope += chop.yz * 0.055 * fineFade;
+    slope *= 1.0 + saturate(rainStrength) * 0.25;
 
     // Rain roughens the surface slightly. The normal's vertical axis is Y.
     float flatness = 1.0 - saturate(rainStrength) * 0.08;
@@ -95,7 +86,7 @@ vec3 novaWaterReflection(vec3 toEye, vec3 normal, NovaSky sky) {
 float novaWaterGlint(vec3 toEye, vec3 normal, NovaSky sky) {
     vec3 reflected = reflect(-toEye, normal);
     float aligned = max(dot(normalize(reflected), sky.lightDir), 0.0);
-    return smoothstep(0.985, 0.999, aligned) * 2.5;
+    return smoothstep(0.955, 0.997, aligned) * 1.8;
 }
 
 #endif

@@ -4,6 +4,9 @@
 #include "/lib/settings.glsl"
 #include "/lib/uniforms.glsl"
 #include "/lib/util.glsl"
+#ifdef NOVA_WATER_MATERIAL_ID
+#include "/lib/water_waves.glsl"
+#endif
 #ifdef NOVA_VEGETATION_SWAY
 #include "/lib/vegetation.glsl"
 #endif
@@ -25,17 +28,10 @@ in vec2 mc_Entity;
 
 #ifdef NOVA_WATER_MATERIAL_ID
 flat out float vWaterBlock;
+#endif
 
-float novaWaterVertexHeight(vec2 worldXZ) {
-    const vec2 directionA = vec2(0.894427, 0.447214);
-    const vec2 directionB = vec2(-0.371391, 0.928477);
-    float angleA = mod(dot(directionA, worldXZ) * 0.075 + frameTimeCounter * 0.42, NOVA_TAU);
-    float angleB = mod(dot(directionB, worldXZ) * 0.118 - frameTimeCounter * 0.31, NOVA_TAU);
-    float waveA = exp(sin(angleA) - 1.0) * 0.5;
-    float waveB = exp(sin(angleB) - 1.0) * 0.5;
-    return ((waveA - 0.233) * 1.25 + (waveB - 0.233) * 0.72)
-         * 0.22 * WATER_WAVE_HEIGHT;
-}
+#ifdef NOVA_VEGETATION_SWAY
+flat out float vVegetationBlock;
 #endif
 
 void main() {
@@ -50,7 +46,7 @@ void main() {
         vec3 worldNormal = normalize(mat3(gbufferModelViewInverse) * (gl_NormalMatrix * gl_Normal));
         if (worldNormal.y > 0.75) {
             vec3 worldPos = cameraPosition + playerPos;
-            float displacement = novaWaterVertexHeight(worldPos.xz);
+            float displacement = novaWaterSurfaceHeight(worldPos.xz);
             viewPos.xyz += mat3(gbufferModelView) * vec3(0.0, displacement, 0.0);
         }
 #endif
@@ -58,9 +54,10 @@ void main() {
 #endif
 
 #ifdef NOVA_VEGETATION_SWAY
+    vVegetationBlock = mc_Entity.x;
     if (mc_Entity.x == 101.0) {
-        vec2 worldXZ = cameraPosition.xz + playerPos.xz;
-        vec2 offset = novaVegetationOffset(worldXZ);
+        vec3 worldPos = cameraPosition + playerPos;
+        vec2 offset = novaVegetationOffset(worldPos);
         viewPos.xyz += mat3(gbufferModelView) * vec3(offset.x, 0.0, offset.y);
     }
 #endif

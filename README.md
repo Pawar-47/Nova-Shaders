@@ -3,13 +3,22 @@
 A small, original shader pack for **Minecraft Java 1.21.5** running **Iris 1.8.x** with
 **Sodium**, on a Fabric install.
 
-The target is an older Intel Core i3 with integrated graphics on Windows, but the exact CPU
-and GPU model are not available. The pack therefore stays on a compact forward pipeline,
-one shadow map, a small cloud ray march and two full-screen passes rather than making
-hardware-specific FPS claims.
+The target system is an Intel Core i3-5005U @ 2.00 GHz with Intel HD Graphics 5500 on
+Windows. The pack stays on a compact forward pipeline, one shadow map, a small cloud ray
+march and two full-screen passes. It has not been benchmarked on this hardware, so no FPS or
+performance guarantee is claimed; start with the POTATO preset and adjust from there.
 
-Version **0.9.0**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.0**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+## What changed in 0.10.0
+
+- **Shared water wave field.** A higher-frequency world-space wave function now drives both top-surface vertex displacement and analytic fragment normals; the depth treatment remains restricted to mapped water.
+- **More expressive vegetation motion.** Iris block ID 101 selects leaves and plant blocks for a continuous height-varying wind field shared by terrain and shadow passes. Grass blocks use separate ID 102 for subtle top-face colour variation, not geometry sway.
+- **Horizon cloud LOD.** Long cloud rays blend their samples toward a shared broad field, fade out pixel jitter, and cap per-step optical depth to reduce the risk of grainy horizon artifacts.
+- **Hardware guidance.** The README and POTATO tooltip name the i3-5005U / HD Graphics 5500 target; performance remains unmeasured.
+
+These are source-level changes, not verified visual results. Compare the same Minecraft scene before and after before judging appearance or performance.
 
 ## What changed in 0.9.0
 
@@ -151,16 +160,17 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 ## What works
 
 - **Lighting and shadows:** directional sunlight and moonlight, hemisphere ambient with a stronger sky/ground split, warm block light, and one shadow map with four filtered taps, bias and distance fades.
-- **Sky and clouds:** procedural day/night gradient, sunset band, sun and moon discs, plus a 60-block cloud slab marched in `CLOUD_STEPS` with front-to-back transmittance and analytic shading.
+- **Sky and clouds:** procedural day/night gradient, sunset band, sun and moon discs, plus a 60-block cloud slab marched in `CLOUD_STEPS` with front-to-back transmittance, analytic shading and a broad horizon LOD.
 - **Fog:** altitude-sensitive height fog plus a distance term, coloured with a restrained air palette.
-- **Water:** Iris block mapping limits low-amplitude vertex displacement, animated normals, Fresnel sky reflection, sun glint and depth absorption/in-scattering to water. The hand-water pass remains separate.
-- **Vegetation:** Iris tags select leaves, flowers, saplings and crops for gentle world-anchored movement, matched in the shadow pass.
+- **Water:** Iris block ID 100 limits the shared world-space wave displacement, animated normals, Fresnel sky reflection, sun glint and depth absorption/in-scattering to water. The hand-water pass remains separate.
+- **Vegetation:** Iris tag ID 101 selects leaves and plants for a continuous wind field matched in the shadow pass; grass-block ID 102 receives subtle top-face tone variation.
 - **Post-processing:** exposure, independent RGB gains, ACES tonemapping, saturation, contrast, underwater tint, FXAA, vignette and ordered dithering.
 - **Alpha coverage:** distance-faded Bayer coverage for terrain cutouts and shadows; other opaque programs keep the previous low cutoff, and translucent entities retain alpha for blending.
 - **Settings:** Color, Scene and Quality screens, with `DEFAULT` and `POTATO` presets.
 
-## What is deliberately not in 0.9.0
+## What is deliberately not in 0.10.0
 
+- Shader-only changes do not alter vanilla tree generation, branch layout, or grass-block density.
 - Screen-space terrain reflections in water.
 - Multiple-scattering clouds or cloud shadows on the ground.
 - Wet surfaces after rain.
@@ -184,10 +194,10 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
    in which case it is `<instance>\shaderpacks`.
 5. Start the game, open **Options -> Video Settings -> Shader Packs**, select
    **Nova Shaders** and click **Apply**.
-6. If the frame rate is poor, open **Shader Pack Settings** and pick the **POTATO** preset:
-   it keeps clouds and shadows enabled with three cloud samples and a lower-resolution,
-   shorter-range shadow map. If performance is still poor, turn **Shadows** and **Clouds** off
-   manually and reduce **Cloud steps**.
+6. For the i3-5005U and HD Graphics 5500, start with the **POTATO** preset in **Shader Pack
+   Settings**. It uses three cloud samples and a lower-resolution, shorter-range shadow map while
+   keeping clouds and shadows enabled. If performance is still poor, turn **Shadows** and
+   **Clouds** off manually and reduce **Cloud steps**.
 
 The pack reports `pack_format` 46, which is the 1.21.5 resource pack format.
 
@@ -213,9 +223,9 @@ No code from BSL Shaders, Complementary Shaders or MakeUp Ultra Fast is included
 
 ## Not benchmarked
 
-These changes have not been GPU-compiled, visually checked in Minecraft, or benchmarked. The repository includes `tools/check_shaders.sh`, a static source checker that checks required files, version and pack metadata, entry-point and stage pairing, include resolution, preprocessor balance (including `block.properties`), block-ID/tag mappings, material varyings, and option definitions/labels and settings controls. It does not compile GLSL or establish runtime compatibility or performance, and it has not been run for these changes.
+These changes have not been GPU-compiled, visually checked in Minecraft, or benchmarked. The repository includes `tools/check_shaders.sh`, a static source checker for required files, version and pack metadata, entry-point and stage pairing, include resolution, preprocessor balance (including `block.properties`), the water/vegetation/grass-block mappings and interfaces, shared water and wind paths, cloud horizon LOD and optical-depth bounds, and option definitions/labels and controls. It does not compile GLSL or establish runtime compatibility, visual quality or performance. CI runs it, and the packaging script, for every push and pull request.
 
-No frame times are claimed. If Iris reports a compile failure, its shader log (`logs/latest.log`) should identify the file and line. Useful first checks are cloud edges and shading, water near and far and underwater, translucent entities, foliage and shadows, rain, and the Nether.
+No frame times are claimed. If Iris reports a compile failure, its shader log (`logs/latest.log`) should identify the file and line. Useful checks are matched before/after views of close and distant water, vegetation and shadows, and clouds at the horizon. Also check translucent entities, rain and the Nether.
 
 ## Repository layout
 
@@ -226,7 +236,7 @@ LICENSE                   MIT
 THIRD-PARTY-NOTICES.txt   adaptation attributions and MIT notices
 shaders/
   shaders.properties      option screens, sliders and the two presets
-  block.properties        Iris water and vegetation material IDs
+  block.properties        Iris water, vegetation and grass-block material IDs
   lang/en_us.lang         labels, tooltips and on/off values
   gbuffers_*.vsh/.fsh     entry points with program defines and shared-body includes
   shadow.vsh/.fsh         renders the shadow map with matching foliage sway
@@ -240,7 +250,8 @@ shaders/
     shadow.glsl           shadowFactor: four taps, slope scaled bias
     lighting.glsl         sunlight, skylight ambient, warm block light, applyLighting
     water.glsl            slope normal, Fresnel, reflection, glitter
-    vegetation.glsl       shared world-anchored wind offset
+    water_waves.glsl      shared analytic water height and slope field
+    vegetation.glsl       shared world-space wind field
     fog.glsl              height falloff distance fog
     body/                 the actual shader bodies the entry points include
 tools/
