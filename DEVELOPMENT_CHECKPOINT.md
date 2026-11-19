@@ -63,3 +63,15 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 - This supersedes the earlier note saying no PR workflow run was reported. The combined commit-status endpoint returned no separate status entries, but the workflow-run endpoint confirms the completed successful run.
 - Scope of this verification remains static source validation and ZIP packaging. It does not compile GLSL with a GPU driver, launch Minecraft/Iris, verify rendered appearance, or benchmark Intel HD 5500 performance.
 - PR #2 remains open pending review of the passing source changes and the remaining runtime-only validation. Do not mark the shader visually or performance complete without the target-machine test.
+
+
+## Shader-only merge and release — 2026-11-20
+
+- PR #2 (https://github.com/Pawar-47/Nova-Shaders/pull/2) was squash-merged into main.
+- Merge commit: `7496358866e7e99246e63f2a5dfc367cd7256d0a`.
+- The merge removed `companion/nova-natural-foliage/` and `tools/check_foliage_pack.py`; the build now packages and uploads only the shader ZIP.
+- The main-branch release workflow published `v0.10.4` from the merge commit. Release URL: https://github.com/Pawar-47/Nova-Shaders/releases/tag/v0.10.4
+- Verified release assets: `nova-shaders-0.10.4-shaderpack.zip` (41.2 KB; SHA-256 `99b916aa545970f017e04d7ecdf0cbb3a01ef48a17d3141188e97a642b867ae0`) plus GitHub-generated source archives. No companion resource pack is attached.
+- PR-branch Actions run `44618555950` passed shader static checks, shader-only packaging and artifact upload. Follow-up checkpoint run `44618752783` also passed those same steps. PR workflow correctly skipped release publication; main merge triggered publication of v0.10.4.
+- Release notes explicitly state that GLSL has not been GPU-compiled, the shader has not been visually checked in Minecraft/Iris, and Intel HD 5500 performance has not been benchmarked. Do not remove that qualification without real tests.
+- Next engineering work is to add a genuine Iris-compatible shader preprocessing/GLSL validation path, then perform actual Minecraft 1.21.5 + Iris 1.8.x runtime tests and target-machine FPS/visual comparisons. Continue with shader-only code; do not reintroduce companion models or resource packs.
