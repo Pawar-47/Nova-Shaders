@@ -45,7 +45,7 @@ option.CLOUD_ALTITUDE.comment=Height of the cloud sheet in blocks.
 option.WATER_WAVES=Water waves
 option.WATER_WAVES.comment=Animates the water surface normal. Turning it off leaves flat, still water.
 option.WATER_WAVE_HEIGHT=Wave height
-option.WATER_WAVE_HEIGHT.comment=Height of the five swells and the fine ripples on top of them.
+option.WATER_WAVE_HEIGHT.comment=Strength of two directional swells and fine ripples; zeroing waves leaves the surface flat.
 option.UNDERWATER_TINT=Underwater tint
 option.UNDERWATER_TINT.comment=Tints and darkens the screen while the camera is under water.
 
@@ -59,7 +59,7 @@ option.shadowMapResolution.comment=Size of the shadow map. 2048 is sharper and n
 option.shadowDistance=Shadow distance
 option.shadowDistance.comment=How far from the camera shadows are drawn. Beyond this distance the map fades out.
 option.CLOUD_STEPS=Cloud steps
-option.CLOUD_STEPS.comment=How many steps the cloud ray march takes through the slab. Higher is smoother and slower.
+option.CLOUD_STEPS.comment=Cloud volume samples per pixel. Four is the balanced default; more steps are smoother but slower.
 
 # On/off labels for the options that are really switches.
 value.SHADOWS.0=Off

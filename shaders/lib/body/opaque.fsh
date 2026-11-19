@@ -36,15 +36,20 @@ void main() {
 #else
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
 
-    // Vanilla renders cutout geometry with an alpha test that does not exist on
-    // modern OpenGL, so the discard has to happen here. The threshold rides a
-    // stable ordered dither, which turns a staircased cutout edge into a soft
-    // fringe, and it creeps up with distance to drop the single texels that would
-    // otherwise pop in and out as the camera moves. Vegetation is where both of
-    // those show up most.
+#ifndef NOVA_TRANSLUCENT_ENTITIES
+#ifdef NOVA_ALPHA_COVERAGE
+    // Terrain cutouts use stable ordered coverage dithering at distance.
+    float distanceFade = smoothstep(12.0, 96.0, length(vPlayerPos));
+    float cutoutThreshold = mix(0.5, novaAlphaCoverageThreshold(gl_FragCoord.xy), distanceFade);
+    if (albedo.a < cutoutThreshold) discard;
+#else
+    // Preserve the prior low cutoff for other opaque programs; their textures can
+    // contain partial alpha for effects that are not terrain cutouts.
     float cutoutNoise = novaDither(gl_FragCoord.xy) * 0.06;
     float cutoutThreshold = mix(0.10, 0.17, saturate(length(vPlayerPos) / 96.0));
     if (albedo.a < cutoutThreshold + cutoutNoise) discard;
+#endif
+#endif
 #endif
 
     NovaSky sky = novaSkyState();

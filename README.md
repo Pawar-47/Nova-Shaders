@@ -3,18 +3,37 @@
 A small, original shader pack for **Minecraft Java 1.21.5** running **Iris 1.8.x** with
 **Sodium**, on a Fabric install.
 
-It was written for one specific machine: an ageing Intel Core i3 with integrated graphics
-and 12 GB of RAM on Windows. Every choice in it follows from that - a forward lit pipeline
-instead of a deferred one, one shadow map with four filtered taps, one shared noise field,
-and two full screen passes where most packs have a dozen.
+The target is an older Intel Core i3 with integrated graphics on Windows, but the exact CPU
+and GPU model are not available. The pack therefore stays on a compact forward pipeline,
+one shadow map, a small cloud ray march and two full-screen passes rather than making
+hardware-specific FPS claims.
 
-Version **0.7.0**. MIT licensed. It has not been benchmarked (see below).
+Version **0.8.0**. MIT licensed; third-party MIT adaptations are recorded in
+[THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+## What changed in 0.8.0
+
+- **Water waves stay anchored to the world.** Two low-cost directional wave slopes, adapted
+  from Glimmer's MIT-licensed wave code, layer over one fine noise gradient. The view-angle
+  flattening now blends toward the actual world-up axis, and the existing wave-height slider
+  now controls the result.
+- **Water has depth-tinted body colour.** Per-channel Beer-Lambert attenuation and a restrained
+  teal-green in-scattering term are adapted from Glimmer's MIT-licensed water medium code.
+  The alpha follows the same transmittance and keeps a floor over shallow bottoms.
+- **Clouds shade more naturally at lower cost.** Spectrum's MIT cloud source informed a compact
+  anisotropic phase term and height-shaped density; the expensive 3D noise textures and
+  secondary light marches are not ported. The default cloud budget drops from five samples to
+  four, while the Potato profile uses three.
+- **Terrain cutouts transition more smoothly.** A distance-faded Bayer coverage threshold is
+  used for terrain and shadows; other opaque programs keep their low alpha cutoff, while the
+  translucent-entity pass preserves texture alpha for blending.
+- **Daylight ambient is less blue.** Sky and ground hemisphere colours are closer to neutral,
+  while sunset warmth remains intact.
 
 ## What changed in 0.7.0
 
-This is the first version built by studying how the two reference packs actually work rather
-than by guessing. Neither pack's source may be reused, so what follows is the approach,
-reimplemented from scratch with this pack's own maths and constants.
+This version's cloud slab and depth-based water were implemented in Nova before the licensed
+source adaptations in 0.8.0.
 
 - **Clouds are a marched slab now, not a painted dome.** A single noise field sampled by view
   direction can only ever look like a texture on a sphere. The clouds are a 60 block thick slab
@@ -54,9 +73,8 @@ reimplemented from scratch with this pack's own maths and constants.
 ## What changed in 0.5.0
 
 0.4.0's water still read as a moving sheet of tinted glass and the clouds as flat cut-outs.
-Both are rebuilt around the techniques behind the look this pack was asked to follow, written
-from scratch: no BSL file, function, constant or table was copied or transliterated, so the
-provenance rule below still holds.
+Both were rebuilt in Nova. Those implementations predate the limited MIT-licensed source
+adaptations added in 0.8.0 and documented in the provenance section below.
 
 - **Water detail comes from noise now, not only sines.** Three swell trains carry the large
   motion; on top of them sits the gradient of a noise field at roughly one block per cell.
@@ -123,53 +141,23 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 
 ## What works
 
-- **Directional lighting** from the sun, and a dim cold moon at night, both warmed up near
-  the horizon, over a near neutral ambient so surfaces keep their own colour.
-- **Shadow mapping**: one depth map, four taps on a half texel grid (so they behave like a
-  hardware box filter), slope scaled bias, normal offset, edge and distance fades, and a
-  switch to turn it off.
-- **Sky**: procedural vertical gradient, a sunset band that follows the sun across the
-  horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a 60 block slab the
-  view ray is marched through in `CLOUD_STEPS` steps, with height eroded coverage, front to
-  back transmittance, analytic per-sample lighting and forward scattering. Vanilla sun, moon
-  and cloud geometry is discarded so nothing is drawn twice.
-- **Fog**: light exponential height fog whose density drops with altitude, plus a squared
-  distance term that only builds up far away, coloured by a desaturated air colour with a
-  little warmth on the sun side.
-- **Water**: three noise gradient slope octaves plus a single flatness value for the surface
-  normal, flattened by incidence so it mirrors at grazing angles, a squared Fresnel with a 0.75
-  ceiling, the sky as reflection, a soft glitter disc for the sun and moon, and a depth curve
-  transparency over a dark teal body. Ripples live in the reflection and the thickness, not in
-  the lighting.
-- **Lighting**: the sun with a small wrap so terminators are soft, a hemisphere ambient with
-  cool light from above and warm bounce from the ground, and block light for torches and
-  lava.
-- **Post**: exposure, per channel red/green/blue gains, ACES tonemapping, saturation and
-  contrast, an underwater tint, FXAA, a soft vignette and a 4x4 ordered dither.
-- **Cutout alpha test** in both the gbuffer and the shadow pass, so leaves and grass look
-  and shadow correctly.
-- **Shader Pack Settings**: three screens (Color, Scene, Quality) with sliders, and two
-  presets, `DEFAULT` and `POTATO`.
+- **Lighting and shadows:** directional sunlight and moonlight, hemisphere ambient, warm block light, and one shadow map with four filtered taps, bias and distance fades.
+- **Sky and clouds:** procedural day/night gradient, sunset band, sun and moon discs, plus a 60-block cloud slab marched in `CLOUD_STEPS` with front-to-back transmittance and analytic shading.
+- **Fog:** altitude-sensitive height fog plus a distance term, coloured with a restrained air palette.
+- **Water:** world-anchored directional wave slopes plus fine noise, Fresnel sky reflection and sun glint. Horizontal sheets use per-channel depth absorption and in-scattering; other translucent surfaces retain a separate blended path.
+- **Post-processing:** exposure, independent RGB gains, ACES tonemapping, saturation, contrast, underwater tint, FXAA, vignette and ordered dithering.
+- **Alpha coverage:** distance-faded Bayer coverage for terrain cutouts and shadows; other opaque programs keep the previous low cutoff, and translucent entities retain alpha for blending.
+- **Settings:** Color, Scene and Quality screens, with `DEFAULT` and `POTATO` presets.
 
-## What is deliberately not in 0.7.0
+## What is deliberately not in 0.8.0
 
-Not missing by accident - left out on purpose, and listed here so nobody has to guess:
-
-- Screen space terrain reflections in water (the water reflects the sky only).
-- Multiple scattering clouds or cloud shadows on the ground. There is one slab, marched in a
-  few steps, with analytic per-sample lighting.
-- Waving foliage, grass or leaves.
-- Wet surfaces after rain. Rain darkens and flattens the sky, nothing more.
-- PBR: no LabPBR, no POM, no parallax, no specular maps. Vanilla textures only.
-- Dimension specific skies. The horizon is pulled toward vanilla's fog colour, so the
-  Nether and the End read plausibly, but there is no bespoke End or Nether sky.
-- Stars, moon phases, coloured shadows, SSAO, bloom, TAA.
-- Water is not identified by block id, so every translucent surface shares one model. The
-  depth driven body is limited to horizontal sheets, which keeps vertical glass panes looking
-  like vanilla glass, but a glass roof or floor will read as water.
-- Vanilla's lightmap texture is not sampled; block and sky light levels are read straight
-  out of the lightmap coordinate and shaped by curves in `lib/lighting.glsl`. Night vision
-  and blindness are therefore not honoured.
+- Screen-space terrain reflections in water.
+- Multiple-scattering clouds or cloud shadows on the ground.
+- Waving foliage or wet surfaces after rain.
+- PBR, LabPBR, parallax, POM or specular maps.
+- Dimension-specific skies, stars, moon phases, coloured shadows, SSAO, bloom or TAA.
+- Water is not selected by block ID. Translucent surfaces share a program; depth-based water treatment applies to horizontal sheets, so glass roofs or floors may also look water-like.
+- The vanilla lightmap texture is not sampled; night vision and blindness are therefore not honoured.
 
 ## Install (Fabric 1.21.5 + Iris)
 
@@ -193,53 +181,29 @@ The pack reports `pack_format` 46, which is the 1.21.5 resource pack format.
 
 ## Licence and provenance
 
-MIT, see [LICENSE](LICENSE).
+Nova Shaders is MIT licensed; see [LICENSE](LICENSE). Version 0.8.0 contains limited adaptations from two MIT-licensed shader projects, with source links, attribution, scope and license text in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt):
 
-Every line in this pack was written for this pack. No file, function, constant or asset has
-been copied, ported, renamed or "rewritten" from BSL Shaders, Complementary Shaders, MakeUp
-Ultra Fast, or any other shader pack. No textures ship with it: the cloud sheet, the water
-chop, the moon mottling and the dither are all generated in GLSL from one hash function in
-`shaders/lib/util.glsl`.
+- **Glimmer:** the compact directional wave profile and analytic slope, plus Beer-Lambert water attenuation and in-scattering, adapted in `shaders/lib/water.glsl`. Glimmer credits afl_ext for the upstream procedural wave method; that credit is included in the notice.
+- **Spectrum:** the height-profiled cloud-density approach and compact anisotropic phase model, adapted in `shaders/lib/sky.glsl`. Spectrum's 3D noise textures, compute passes and multi-ray lighting are not included.
 
-The techniques are standard and publicly documented, which is what makes them usable
-without borrowing code. For 0.7.0 the clouds and the water were built by studying published
-descriptions of how BSL Shaders and MakeUp Ultra Fast do them - a transmittance marched cloud
-slab with height eroded coverage, and a slope based water normal flattened by incidence over a
-depth based transparency curve - and then implementing that approach here. Neither pack's
-source is licensed for reuse, and none of it was copied: no file, function, constant,
-coordinate table or structure was taken from either of them.
+No code from BSL Shaders, Complementary Shaders or MakeUp Ultra Fast is included. No textures ship with the pack; procedural detail is generated in GLSL.
 
 | Technique | Where |
 | --- | --- |
-| Shadow mapping with a few filtered taps and slope scaled bias | `shaders/lib/shadow.glsl` |
-| Lightmap sky and block light split | `shaders/lib/lighting.glsl` |
-| Exponential height fog | `shaders/lib/fog.glsl` |
-| Transmittance marched cloud slab with height eroded coverage | `shaders/lib/sky.glsl` |
-| Schlick Fresnel, sky reflection, sun glint | `shaders/lib/water.glsl` |
-| ACES filmic tonemapping (Narkowicz fit) | `shaders/lib/util.glsl` |
+| Shadow mapping and filtered taps | `shaders/lib/shadow.glsl` |
+| Lightmap sky and block-light split | `shaders/lib/lighting.glsl` |
+| Exponential height and distance fog | `shaders/lib/fog.glsl` |
+| Marched cloud slab and compact scattering phase | `shaders/lib/sky.glsl` |
+| Wave slopes, water medium, Fresnel and reflection | `shaders/lib/water.glsl` |
+| ACES filmic tonemapping | `shaders/lib/util.glsl` |
 | FXAA | `shaders/lib/body/final.fsh` |
-| Analytic noise gradient slopes, flattened by incidence | `shaders/lib/water.glsl` |
-| Depth curve transparency over the opaque scene | `shaders/lib/body/water.fsh` |
+| Depth-driven water treatment | `shaders/lib/body/water.fsh` |
 
 ## Not benchmarked
 
-**This pack has never been compiled on a GPU or measured for frame rate.** It was written
-and then checked statically, with `tools/check_shaders.sh`, which verifies:
+These changes have not been GPU-compiled, visually checked in Minecraft, or benchmarked. The repository includes `tools/check_shaders.sh`, a static source checker that checks required files, version and pack metadata, entry-point and stage pairing, include resolution, preprocessor balance, and option definitions/labels and settings controls. It does not compile GLSL or establish runtime compatibility or performance, and it has not been run for these changes.
 
-- every entry program starts with `#version 330 compatibility`,
-- every entry program includes a body from `shaders/lib/body`,
-- every `#include` resolves to a real file,
-- every program has both a vertex and a fragment stage,
-- preprocessor conditionals balance in every file,
-- every option used by `shaders.properties` is defined in the shaders and labelled in
-  `shaders/lang/en_us.lang`.
-
-That is not the same as running it. No frame times are claimed anywhere in this repository.
-If something fails to compile, the Iris shader log (`logs/latest.log`) names the file and
-line; please report it.
-
-Worth testing first: shadow edges and acne, water close up and at a distance, the scattered
-clouds at dawn and dusk, rain, and the Nether.
+No frame times are claimed. If Iris reports a compile failure, its shader log (`logs/latest.log`) should identify the file and line. Useful first checks are cloud edges and shading, water near and far and underwater, translucent entities, foliage and shadows, rain, and the Nether.
 
 ## Repository layout
 
@@ -247,10 +211,11 @@ clouds at dawn and dusk, rain, and the Nether.
 pack.mcmeta               pack format 46
 VERSION                   the version the release is built from
 LICENSE                   MIT
+THIRD-PARTY-NOTICES.txt   adaptation attributions and MIT notices
 shaders/
   shaders.properties      option screens, sliders and the two presets
   lang/en_us.lang         labels, tooltips and on/off values
-  gbuffers_*.vsh/.fsh     entry points: one #version line and one #include each
+  gbuffers_*.vsh/.fsh     entry points with program defines and shared-body includes
   shadow.vsh/.fsh         renders the shadow map: cutout aware, colour reserved
   composite.vsh/.fsh      exposure, tonemapping, saturation, underwater tint
   final.vsh/.fsh          FXAA, vignette, dither
@@ -278,13 +243,8 @@ bash tools/check_shaders.sh
 bash tools/package.sh
 ```
 
-The archive is written to `build/nova-shaders-<version>-shaderpack.zip` with `shaders/`,
-`pack.mcmeta` and `LICENSE` at its root.
+The archive is written to `build/nova-shaders-<version>-shaderpack.zip`. Its root contains `shaders/`, `pack.mcmeta`, `LICENSE`, and `THIRD-PARTY-NOTICES.txt`.
 
 ## Releasing
 
-`.github/workflows/build.yml` runs the checks and the packaging on every push, uploads the
-zip as a workflow artifact, and - on a push to `main` - creates the release `v<version>`
-from the `VERSION` file with the zip attached. It is additive: if a release for that
-version already exists, the tag and its assets are left alone. To publish a new version,
-bump `VERSION` and push.
+`.github/workflows/build.yml` runs the static checker and package script on pushes and pull requests, uploads the ZIP as a workflow artifact, and creates release `v<version>` on a push to `main`. Existing releases are left untouched. To publish a new version, update `VERSION` and push.

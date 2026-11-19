@@ -25,7 +25,7 @@ layout(location = 0) out vec4 fragColor;
 
 void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
-    if (albedo.a < 0.1) discard;
+    if (albedo.a < novaAlphaCoverageThreshold(gl_FragCoord.xy)) discard;
 
     fragColor = vec4(1.0);
 }

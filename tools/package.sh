@@ -21,7 +21,7 @@ mkdir -p build
 rm -f "$out"
 
 if command -v zip >/dev/null 2>&1; then
-    zip -q -r -X "$out" shaders pack.mcmeta LICENSE -x '*.DS_Store' '__MACOSX/*'
+    zip -q -r -X "$out" shaders pack.mcmeta LICENSE THIRD-PARTY-NOTICES.txt -x '*.DS_Store' '__MACOSX/*'
 else
     # Fallback for machines without zip; keeps the same archive layout.
     python3 - "$out" <<'PY'
@@ -33,6 +33,7 @@ out = sys.argv[1]
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
     archive.write("pack.mcmeta", "pack.mcmeta")
     archive.write("LICENSE", "LICENSE")
+    archive.write("THIRD-PARTY-NOTICES.txt", "THIRD-PARTY-NOTICES.txt")
     for base, dirs, files in os.walk("shaders"):
         dirs.sort()
         for name in sorted(files):
@@ -46,7 +47,7 @@ fi
 # Never publish an archive that is missing something the loader needs.
 missing=0
 if command -v unzip >/dev/null 2>&1; then
-    for required in pack.mcmeta LICENSE shaders/shaders.properties shaders/composite.fsh shaders/final.fsh shaders/lang/en_us.lang; do
+    for required in pack.mcmeta LICENSE THIRD-PARTY-NOTICES.txt shaders/shaders.properties shaders/composite.fsh shaders/final.fsh shaders/lang/en_us.lang; do
         if ! unzip -l "$out" | grep -qE " ${required}$"; then
             printf 'error: %s is missing from the archive\n' "$required" >&2
             missing=1

@@ -6,16 +6,17 @@
 
 /* Water surface.
  *
- * Three octaves of slope, each the exact gradient of a value noise field, summed
- * into one XY tilt. The gradient is analytic, so three octaves cost three noise
- * lookups instead of nine.
- *
- * Two things keep it reading as water rather than as moving glass:
- *   - the tilt is flattened by incidence, so looking down you get the full chop and
- *     looking along the surface it becomes a mirror. That is what keeps distant
- *     water stable without a distance fade;
- *   - the flatness is a single Z value, so roughness is one number and not a filter.
+ * The directional wave profile and its analytic slope are a reduced adaptation
+ * of Glimmer's MIT-licensed waveNormals.glsl (itself crediting afl_ext's
+ * "Very fast procedural ocean"). Two broad wave trains plus one inexpensive
+ * value-noise detail octave keep the surface moving without the source's
+ * sixteen-octave loop or three complete height evaluations per pixel.
  */
+float novaWaterWaveSlope(vec2 position, vec2 direction, float frequency, float phase, float amplitude) {
+    float angle = mod(dot(direction, position) * frequency + phase, NOVA_TAU);
+    float wave = exp(sin(angle) - 1.0) * 0.5;
+    return wave * cos(angle) * frequency * amplitude;
+}
 
 vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 #if WATER_WAVES == 0
@@ -26,37 +27,55 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 
     vec2 p = worldPos.xz;
     float time = frameTimeCounter;
-    float viewDistance = length(worldPos);
+    float viewDistance = length(worldPos - cameraPosition);
 
-    // A 20 block swell, a 32 block cross swell, and an 8 block chop that carries
-    // most of the detail.
-    vec3 swellA = valueNoiseGradient(p * 0.0500 + vec2(time * 0.30, time * 0.30));
-    vec3 swellB = valueNoiseGradient(p * 0.03125 - vec2(time * 0.42, time * 0.42));
+    const vec2 directionA = vec2(0.894427, 0.447214);
+    const vec2 directionB = vec2(-0.371391, 0.928477);
+    float swellA = novaWaterWaveSlope(p, directionA, 0.075, time * 0.42, 1.25);
+    float swellB = novaWaterWaveSlope(p, directionB, 0.118, -time * 0.31, 0.72);
 
-    // The finest octave fades out with distance: without mipmaps it would alias
-    // into noise on the far side of a lake.
+    // The finest octave fades out with distance to avoid aliased far-water detail.
     float fineFade = 1.0 - saturate(viewDistance / 80.0);
-    vec3 chop = valueNoiseGradient(p * 0.1250 + vec2(time * 0.10, -time * 0.10));
+    vec3 chop = valueNoiseGradient(p * 0.125 + vec2(time * 0.10, -time * 0.10));
 
-    vec2 slope = swellA.yz * 0.075 + swellB.yz * 0.085 + chop.yz * 0.036 * fineFade;
+    vec2 slope = directionA * swellA + directionB * swellB + chop.yz * 0.030 * fineFade;
+    slope *= WATER_WAVE_HEIGHT * (1.0 + saturate(rainStrength) * 0.25);
 
-    // Flatness: lower is choppier, and rain roughens the surface.
-    float flatness = 0.90 - saturate(rainStrength) * 0.35;
+    // Rain roughens the surface slightly. The normal's vertical axis is Y.
+    float flatness = 1.0 - saturate(rainStrength) * 0.08;
+    vec3 tilted = normalize(vec3(-slope.x, flatness, -slope.y));
 
-    vec3 tilted = normalize(vec3(slope.x, flatness, slope.y));
-
-    // Flatten by incidence: full chop underfoot, mirror towards the horizon.
-    float incidence = abs(dot(geometricNormal, normalize(-worldPos)));
-    tilted.xy *= incidence;
-    tilted.z += 1.0 - incidence;
+    // Fade the perturbation toward the horizon while preserving the actual up axis.
+    float incidence = abs(dot(geometricNormal, normalize(cameraPosition - worldPos)));
+    tilted.xz *= incidence;
+    tilted.y += 1.0 - incidence;
 
     return normalize(tilted);
 #endif
 }
 
-/* Fresnel in the shape the reference water uses: no strong F0, a squared falloff,
-   and a ceiling well below a full mirror, so water keeps its colour even at
-   grazing angles instead of turning into a sheet of sky. */
+/* Beer-Lambert attenuation with a compact in-scattering term, adapted from
+   Glimmer's MIT-licensed waterFog.glsl. This returns the colour of the water
+   body; the caller still blends it with the already-rendered scene. */
+vec3 novaWaterTransmittance(float thickness) {
+    const vec3 absorption = vec3(0.52, 0.30, 0.23);
+    return exp(-absorption * max(thickness, 0.0));
+}
+
+vec3 novaWaterMedium(vec3 surfaceColour, float thickness) {
+    vec3 transmittance = novaWaterTransmittance(thickness);
+    const vec3 scatterColour = vec3(0.035, 0.095, 0.078);
+    vec3 surfaceLinear = sRGBToLinear(surfaceColour);
+    vec3 scatterLinear = sRGBToLinear(scatterColour);
+    return linearToSRGB(surfaceLinear * transmittance + scatterLinear * (1.0 - transmittance));
+}
+
+float novaWaterOpacity(float thickness) {
+    return 1.0 - luma(novaWaterTransmittance(thickness));
+}
+
+/* Schlick-shaped reflection with a restrained ceiling, so water keeps some body
+   colour at grazing angles instead of becoming a full sheet of sky. */
 float novaFresnel(float cosTheta) {
     float f = 1.0 - saturate(cosTheta);
     return 0.02 + 0.73 * f * f;
@@ -71,8 +90,7 @@ vec3 novaWaterReflection(vec3 toEye, vec3 normal, NovaSky sky) {
     return mix(reflectedSky, vec3(luma(reflectedSky)), 0.12);
 }
 
-/* Sun and moon glitter: a soft disc where the reflected view meets the light.
-   A wide soft blob reads as water; a tight sparkle reads as glitter on plastic. */
+/* Sun and moon glitter: a soft disc where the reflected view meets the light. */
 float novaWaterGlint(vec3 toEye, vec3 normal, NovaSky sky) {
     vec3 reflected = reflect(-toEye, normal);
     float aligned = max(dot(normalize(reflected), sky.lightDir), 0.0);

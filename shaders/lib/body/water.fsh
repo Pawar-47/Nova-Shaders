@@ -34,13 +34,8 @@ float novaSceneDistance(float depth) {
     return -view.z / max(abs(view.w), 1.0e-4);
 }
 
-/* Translucent surfaces: water, ice and stained glass all share this program.
- *
- * The body is one dark desaturated teal, lit from the flat quad normal, with a
- * Fresnel weighted sky reflection on top. Ripples live in the reflection and in
- * the thickness, not in the lighting: lighting a wave normal makes water look like
- * waving fabric. */
-
+/* Translucent surfaces: water, ice and stained glass share this program. Water
+   alone receives the depth-driven medium treatment on near-horizontal sheets. */
 void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
     if (albedo.a < 0.02) discard;
@@ -51,11 +46,11 @@ void main() {
 #ifdef NOVA_HAND
     vec3 normal = geometricNormal;
 #else
-    vec3 normal = novaWaterNormal(vPlayerPos, geometricNormal);
+    // vPlayerPos is camera-relative; add the camera origin so waves stay fixed
+    // to the world instead of sliding with the view.
+    vec3 normal = novaWaterNormal(cameraPosition + vPlayerPos, geometricNormal);
 #endif
 
-    // vPlayerPos points from the camera to the surface, so the eye vector is just
-    // the way back.
     vec3 toEye = normalize(-vPlayerPos);
     float NdotL = max(dot(geometricNormal, sky.lightDir), 0.0);
 
@@ -66,16 +61,29 @@ void main() {
 #endif
 
     vec3 light = novaSurfaceLight(geometricNormal, NdotL, vLightCoord, shadow, sky);
+    float thickness = 0.0;
+    float sheet = 0.0;
 
-    // One dark, slightly green water colour, with a quarter of the biome tint kept
-    // so that two oceans are not literally identical.
-    vec3 baseWater = vec3(0.050, 0.100, 0.110);
-    vec3 body = mix(baseWater, albedo.rgb, 0.25) * light;
+#ifndef NOVA_HAND
+    // How much water sits between this pixel and the ground behind it, in blocks.
+    float surfaceDistance = novaSceneDistance(gl_FragCoord.z);
+    float behind = texture(depthtex1, gl_FragCoord.xy / vec2(viewWidth, viewHeight)).r;
+    thickness = clamp(novaSceneDistance(behind) - surfaceDistance, 0.0, 64.0);
 
-    // How much sky light reaches this water. Nearly none in a cave or under a roof,
-    // so the reflection fades out there too instead of lighting the ceiling blue.
+    // Seen from below, the sky is behind the surface and it has to stay readable.
+    if (isEyeInWater == 1) thickness *= 0.30;
+
+    // Vertical faces keep vanilla's translucency; only water-like sheets get depth.
+    sheet = smoothstep(0.55, 0.85, abs(geometricNormal.y));
+#endif
+
+    // Keep a restrained biome contribution, then absorb it through the water column.
+    vec3 baseWater = mix(vec3(0.050, 0.100, 0.110), albedo.rgb, 0.25);
+    vec3 mediumWater = novaWaterMedium(baseWater, thickness);
+    vec3 body = mix(baseWater, mediumWater, sheet) * light;
+
+    // Reflections fade in dark interiors instead of lighting their ceilings blue.
     float skyLevel = novaLightLevel(vLightCoord.y);
-
     vec3 reflection = novaWaterReflection(toEye, normal, sky);
     float reflectivity = novaFresnel(dot(normal, toEye));
     vec3 colour = mix(body, reflection * (0.25 + 0.75 * skyLevel), reflectivity);
@@ -84,27 +92,11 @@ void main() {
     colour += novaSunlight(sky) * novaWaterGlint(toEye, normal, sky) * skyLevel * shadow * 0.55;
 
     float alpha = albedo.a;
-
 #ifndef NOVA_HAND
-    // How much water sits between this pixel and the ground behind it, in blocks.
-    float surfaceDistance = novaSceneDistance(gl_FragCoord.z);
-    float behind = texture(depthtex1, gl_FragCoord.xy / vec2(viewWidth, viewHeight)).r;
-    float thickness = clamp(novaSceneDistance(behind) - surfaceDistance, 0.0, 64.0);
-
-    // Seen from below, the sky is behind the surface and it has to stay readable.
-    if (isEyeInWater == 1) thickness *= 0.30;
-
-    // The transparency curve: shallow water shows the bottom clearly through a
-    // tinted body, and by about eight blocks nothing below survives. Alpha blending
-    // against the already rendered scene is the same operation as sampling it.
-    float depthAlpha = 1.0 - 1.0 / (thickness * thickness * 0.16 + 1.125);
-
-    // Horizontal sheets only, so a vertical glass pane keeps vanilla's alpha.
-    float sheet = smoothstep(0.55, 0.85, abs(geometricNormal.y));
+    // The scalar blend approximates the mean of the per-channel transmittance;
+    // a floor keeps shallow water tinted rather than clear.
+    float depthAlpha = max(0.62, novaWaterOpacity(thickness));
     alpha = clamp(mix(max(albedo.a, 0.62), depthAlpha, sheet), 0.0, 0.97);
-#endif
-
-#ifndef NOVA_HAND
     colour = applyFog(colour, vPlayerPos, sky);
 #endif
 

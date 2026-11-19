@@ -37,8 +37,8 @@ vec3 novaSunlight(NovaSky sky) {
  * so the colour still comes from the texture.
  */
 vec3 novaAmbient(NovaSky sky, vec3 normal) {
-    vec3 fromSky = vec3(0.60, 0.66, 0.74);
-    vec3 fromGround = vec3(0.56, 0.52, 0.46);
+    vec3 fromSky = vec3(0.64, 0.68, 0.70);
+    vec3 fromGround = vec3(0.59, 0.54, 0.47);
     float up = normal.y * 0.5 + 0.5;
 
     vec3 day = mix(fromGround, fromSky, up);

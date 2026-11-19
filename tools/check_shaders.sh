@@ -27,7 +27,7 @@ section() { printf '\n== %s\n' "$*"; }
 
 section "layout"
 
-for required in shaders/shaders.properties shaders/lang/en_us.lang pack.mcmeta LICENSE VERSION; do
+for required in shaders/shaders.properties shaders/lang/en_us.lang pack.mcmeta LICENSE THIRD-PARTY-NOTICES.txt VERSION; do
     [ -e "$root/$required" ] || fail "missing $required"
 done
 

@@ -109,4 +109,11 @@ float novaDither(vec2 pixel) {
     return BAYER_4X4[cell.y * 4 + cell.x] / 16.0 - 0.5;
 }
 
+/* A coverage-preserving alpha threshold: translucent edge texels occupy the
+   matching fraction of each stable 4x4 Bayer tile, while zero and full alpha
+   always remain discarded and solid respectively. */
+float novaAlphaCoverageThreshold(vec2 pixel) {
+    return novaDither(pixel) + 0.53125;
+}
+
 #endif

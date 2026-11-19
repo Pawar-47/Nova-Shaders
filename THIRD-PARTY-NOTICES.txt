@@ -1,0 +1,39 @@
+Nova Shaders includes small adaptations from the following MIT-licensed projects. Their complete source licenses are reproduced below.
+
+Glimmer
+https://github.com/jbritain/glimmer-shaders
+Copyright (c) 2024 Josh Britain
+Adapted in shaders/lib/water.glsl: the compact directional wave profile and analytic slope from shaders/lib/water/waveNormals.glsl, and Beer-Lambert water attenuation/in-scattering from shaders/lib/water/waterFog.glsl.
+
+The Glimmer wave-normal source credits "Very fast procedural ocean" by afl_ext:
+https://www.shadertoy.com/view/MdXyzX
+That upstream method is also identified as MIT-licensed in Glimmer's source.
+
+Spectrum
+https://github.com/zombye/spectrum
+Copyright (c) 2017-2018 Jacob Eriksson
+Adapted in shaders/lib/sky.glsl: the height-profiled cloud-density approach and compact anisotropic phase-scattering model from shaders/include/fragment/clouds3D.fsh. Spectrum's 3D noise textures, compute passes, and multi-ray march are not included.
+
+MIT License
+
+Copyright (c) 2024 Josh Britain
+Copyright (c) 2017-2018 Jacob Eriksson
+Copyright (c) afl_ext
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

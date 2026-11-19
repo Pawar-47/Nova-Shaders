@@ -36,7 +36,7 @@
 // ---------------------------------------------------------------- Quality ---
 #define SHADOWS 1 // [0 1] Shadow mapping with four filtered taps. 0 is the single biggest speed win.
 #define SHADOW_SOFTNESS 1.0 // [0.5 1.0 1.5 2.0 3.0] Spread of the four shadow lookup taps.
-#define CLOUD_STEPS 5 // [4 5 6 8] Steps the cloud ray march takes through the cloud slab. Higher is smoother and slower.
+#define CLOUD_STEPS 4 // [3 4 5 6 8] Steps the cloud ray march takes through the cloud slab. Higher is smoother and slower.
 
 const int shadowMapResolution = 1024; // [512 1024 2048] Shadow map size. 2048 is sharper and noticeably slower.
 const float shadowDistance = 96.0; // [48.0 64.0 96.0 128.0 160.0] How far from the camera shadows are drawn.

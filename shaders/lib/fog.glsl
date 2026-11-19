@@ -46,7 +46,7 @@ float novaFogAmount(vec3 rayToPoint) {
 
 /* Air colour. Desaturated on purpose, and cheap: no sky gradient, no pow(). */
 vec3 novaFogColour(vec3 direction, NovaSky sky) {
-    vec3 air = mix(vec3(0.055, 0.064, 0.084), vec3(0.63, 0.69, 0.76), sky.day);
+    vec3 air = mix(vec3(0.057, 0.064, 0.076), vec3(0.65, 0.69, 0.72), sky.day);
     air = mix(air, vec3(0.80, 0.64, 0.50), sky.sunset * 0.35);
 
     // A little extra brightness towards the sun, so haze glows where the light is.

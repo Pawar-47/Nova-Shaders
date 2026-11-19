@@ -54,8 +54,8 @@ vec3 novaSkyGradient(vec3 direction, NovaSky sky) {
     float above = saturate(dir.y);
     float height = sqrt(above);
 
-    vec3 zenith = mix(vec3(0.015, 0.021, 0.038), vec3(0.33, 0.49, 0.72), sky.day);
-    vec3 horizon = mix(vec3(0.045, 0.056, 0.082), vec3(0.71, 0.79, 0.86), sky.day);
+    vec3 zenith = mix(vec3(0.020, 0.023, 0.030), vec3(0.36, 0.50, 0.67), sky.day);
+    vec3 horizon = mix(vec3(0.050, 0.055, 0.070), vec3(0.75, 0.80, 0.83), sky.day);
 
     // How much this direction looks towards the sun, flattened onto the horizon.
     vec2 flatDir = normalize(vec2(dir.x, dir.z) + vec2(1.0e-4, 0.0));
@@ -145,20 +145,21 @@ float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind) {
     mass += (detail - 0.5) * 0.10;
 
     float threshold = mix(0.62, 0.38, saturate(CLOUD_COVERAGE)) + smoothstep(0.18, 1.0, g) * 0.30;
-    float density = mass - threshold;
+    float density = saturate((mass - threshold) * 1.8);
 
-    // Thinner right at the base than just above it, so the bottom edge is a shelf
-    // and not a solid wall.
+    // Keep a soft shelf at the base and erode the top into rounded crowns. The
+    // compact height profile is adapted from Spectrum's MIT cloud density work;
+    // its 3D noise textures and multi-ray lighting are deliberately not ported.
     density *= mix(0.55, 1.0, smoothstep(0.0, 0.18, g));
+    density *= 1.0 - 0.24 * g * g;
 
-    // Soft saturating curve: thin stays thin, cores flatten near one.
-    density = saturate(density) * 1.6;
+    // Soft saturation keeps thin edges wispy while the cores approach a solid tone.
     return density * inversesqrt(density * density + 0.45);
 }
 
 /* The shaded side of a cloud: a cool slate blue, never black. */
 vec3 novaCloudShade(NovaSky sky) {
-    vec3 colour = mix(vec3(0.055, 0.065, 0.095), vec3(0.35, 0.39, 0.47), sky.day);
+    vec3 colour = mix(vec3(0.055, 0.065, 0.085), vec3(0.36, 0.39, 0.44), sky.day);
     return mix(colour, vec3(0.52, 0.40, 0.32), sky.sunset * 0.45);
 }
 
@@ -166,6 +167,17 @@ vec3 novaCloudShade(NovaSky sky) {
 vec3 novaCloudLit(NovaSky sky) {
     vec3 colour = vec3(1.08, 1.09, 1.12) * (0.12 + 0.88 * sky.day);
     return mix(colour, vec3(1.00, 0.76, 0.55), sky.sunset * 0.60);
+}
+
+/* Compact Henyey-Greenstein-like phase term, adapted from the cloud scattering
+   model in Spectrum's MIT-licensed clouds3D.fsh. This uses one inverse square
+   root per pixel instead of Spectrum's view and sun ray marches.
+ */
+float novaCloudPhase(float cosine) {
+    const float anisotropy = 0.42;
+    float denominator = max(1.0 + anisotropy * anisotropy - 2.0 * anisotropy * cosine, 0.05);
+    return min((1.0 - anisotropy * anisotropy)
+             * inversesqrt(denominator * denominator * denominator) * 0.075, 1.0);
 }
 
 /* Draw the clouds.
@@ -216,13 +228,12 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     float detail = valueNoise(midPoint * 0.0600 + wind);
 
     // Ordered dither on the first sample so the steps read as grain, not as rings.
-    float t = tNear + stepLength * ((novaDither(gl_FragCoord.xy) + 0.5) * 0.85);
+    float t = tNear + stepLength * (novaDither(gl_FragCoord.xy) + 0.5);
 
-    // Forward scattering: thin edges seen against the light go bright.
-    float towardsLight = saturate(dot(-direction, sky.lightDir) * 0.5 + 0.5);
-    float scattering = towardsLight * towardsLight;
-    scattering *= scattering;
-    scattering *= scattering;
+    // Evaluate the phase only if this ray encounters cloud density; most empty
+    // sky rays then avoid the inverse-square-root cost entirely.
+    float scattering = 0.0;
+    bool scatteringComputed = false;
 
     float transmittance = 1.0;
     float absorbed = 0.0;
@@ -236,11 +247,16 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
         float density = novaCloudDensityAt(p, g, detail, wind);
 
         if (density > 0.004) {
+            if (!scatteringComputed) {
+                scattering = novaCloudPhase(dot(-direction, sky.lightDir));
+                scatteringComputed = true;
+            }
+
             // Dark base, bright crown, thick cores grey. sqrt is the cheap stand in
             // for pow(g, 1.5).
             float heightLight = 0.20 + 0.80 * (g * sqrt(g));
             heightLight *= 1.0 - density * 0.42;
-            heightLight = mix(heightLight, 1.0, scattering * 0.55);
+            heightLight = mix(heightLight, 1.0, scattering * 0.65);
 
             float absorb = 1.0 - exp(-density * stepLength * 0.055);
             lit += heightLight * absorb * transmittance;
