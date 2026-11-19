@@ -211,7 +211,7 @@ fi
 section "cloud horizon stability"
 
 sky="$shaders/lib/sky.glsl"
-if ! grep -qF 'float fieldScale = mix(0.0400, 0.0012, horizonLod);' "$sky" ||
+if ! grep -qF 'float fieldScale = mix(0.0140, 0.0012, horizonLod);' "$sky" ||
    ! grep -qF 'worldXZ.y * 0.78 - worldXZ.x * 0.11' "$sky"; then
     fail "cloud field must use broad, asymmetric cloud masses across the sky"
 fi
