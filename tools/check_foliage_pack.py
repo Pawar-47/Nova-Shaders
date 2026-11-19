@@ -5,6 +5,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "companion" / "nova-natural-foliage"
 errors = []
+for required in ("pack.mcmeta", "README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt"):
+    if not (ROOT / required).is_file():
+        print(f"error: missing companion pack file {required}")
+        errors.append(required)
 
 def fail(message):
     errors.append(message)
