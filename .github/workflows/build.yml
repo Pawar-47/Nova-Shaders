@@ -86,7 +86,6 @@ jobs:
           - Cloud sampling uses a larger near-view field scale to avoid a uniform overhead patch, then fades to a broader field near the horizon; the target is roughly 15–20 asymmetric masses across a typical open-sky view.
           - Horizontal water retains at least 82% opacity and increases opacity with depth, avoiding a clear-glass appearance.
           - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
-          - An optional Nova Natural Foliage Lite companion ZIP adds one randomized, angled leaf plane per vanilla leaf block. It is separate from the shader pack and not yet performance-benchmarked.
           - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
             plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
             bends the cast shadow by the identical weight.
