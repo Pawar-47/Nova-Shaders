@@ -24,7 +24,7 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 - Compact forward pipeline, one shadow map, small cloud ray march and two full-screen passes.
 - Default shadow map 512px / 64 blocks; PERFORMANCE disables the shadow pass and FXAA.
 - Water: shared analytic wave height/slope; depth-derived Beer–Lambert absorption and in-scattering; horizontal opacity floor 0.82; sky reflection and restrained glint.
-- Foliage: biome-preserving warm/cool variation, sunset-aware backlighting and a shared terrain/shadow wind field. Plant sway uses Iris `mc_midTexCoord` weighting to keep the sprite base planted.
+- Foliage: biome-preserving warm/cool variation and sunset-aware backlighting. Ground plants use a `mc_midTexCoord` sprite-midpoint hinge; leaf blocks use separate material ID 103 and a continuous world-space wind field with slow canopy sway, tiny per-vertex flutter and a 96-block distance fade. Terrain and shadow passes use the same leaf displacement.
 - Clouds: asymmetric skewed field, near-view scales 0.014 / detail 0.050 fading to broad horizon LOD; four samples by default and no extra march samples added.
 - No SSAO, bloom, SSR or multi-ray volumetric lighting in the default path.
 
@@ -43,7 +43,7 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 
 ## Next implementation order
 
-1. Refine shader-only foliage motion with natural per-vertex phase variation, restrained gusts, distance falloff and exact shadow-pass parity. Avoid adding geometry or creating cracks between adjacent blocks.
+1. Validate the new leaf material ID 103 tag/fallback mapping on Iris 1.8.x; inspect for edge cracks, cube shearing and shadow mismatch. Tune the per-vertex wind amplitude and distance fade only after in-game comparison.
 2. Review water wave detail and depth response; keep high-frequency work close to camera and preserve the user's tinted, not glass-clear, water target.
 3. Improve broad asymmetric cloud distribution within the current fixed sample budget.
 4. Add reproducible Iris-compatible shader preprocessing / GLSL validation to CI if technically sound.
