@@ -8,8 +8,16 @@ Windows. The pack stays on a compact forward pipeline, one shadow map, a small c
 march and two full-screen passes. It has not been benchmarked on this hardware, so no FPS or
 performance guarantee is claimed; start with the POTATO preset and adjust from there.
 
-Version **0.10.1**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.2**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+## What changed in 0.10.2
+
+- **Clouds are larger, fewer and less uniform.** The procedural field is stretched and skewed, with a lower spatial frequency and a higher density threshold. The intended result is a modest number of broad, irregular cloud masses distributed across the sky rather than many small round puffs. The horizon LOD remains bounded for the four-step low-cost march.
+- **Water is less see-through.** Horizontal water now keeps at least 72% blend opacity, rising with depth, so the bottom remains visible through a tinted body instead of looking like clear glass. Vertical water faces retain their separate blend floor.
+- **Target defaults are lighter.** The default shadow map is reduced from 1024 to 512 and shadow distance from 96 to 64 blocks for the Intel HD 5500 target. The 1024 option remains available for sharper shadows.
+
+These are source-level adjustments. Cloud count, water appearance and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed.
 
 ## What changed in 0.10.1
 
