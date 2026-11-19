@@ -204,6 +204,9 @@ section "water opacity and cloud shape"
 if ! grep -qF 'float depthAlpha = max(0.82, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
     fail "horizontal water must retain a tinted translucent body instead of becoming clear"
 fi
+if ! grep -qF 'alpha = clamp(mix(albedo.a, depthAlpha, sheet), 0.0, 0.97);' "$shaders/lib/body/water.fsh"; then
+    fail "stronger water opacity must be restricted to horizontal sheets; vertical faces retain texture alpha"
+fi
 
 section "cloud horizon stability"
 
