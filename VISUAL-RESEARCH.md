@@ -42,14 +42,14 @@ Shader limits remain explicit: GLSL can shade, tint, animate and slightly deform
 - Default shadow map 512px over 64 blocks; PERFORMANCE disables the shadow pass and FXAA.
 - Water uses shared analytic vertex displacement and fragment slope, depth-derived Beer–Lambert tint, and a minimum horizontal blend opacity. Its high-frequency gradient-noise ripple is evaluated only within 72 blocks; the analytic wave slope remains active farther away.
 - Ground plants use a sprite-midpoint hinge; leaf blocks use a separate ID and a continuous world-space vertex field with slow canopy sway plus tiny per-vertex flutter. The leaf field fades out by 96 blocks and is shared exactly with the shadow pass. Both paths preserve vanilla geometry and add no vertices.
-- Clouds use four samples by default (three in the lightest profile), a height-shaped density field and a broad horizon LOD.
+- Clouds use four samples by default (three in the lightest profile), a height-shaped density field and a broad horizon LOD. The separate detail-noise lookup is skipped when the horizon LOD fades its contribution to zero.
 - No SSAO, bloom, screen-space reflections or multi-ray volumetrics are required by default.
 
 ## Engineering rules
 
 1. Research source and license before adopting code. Modrinth metadata alone is not sufficient: inspect the actual repository license and file provenance.
 2. Prefer vertex-stage effects and analytic math over additional full-screen passes or per-pixel ray marches.
-3. Make distance falloff explicit for high-frequency water and foliage detail to avoid shimmer and wasted work at distance. If the fade is zero, skip the high-frequency calculation rather than multiplying an already-computed result by zero.
+3. Make distance falloff explicit for high-frequency water, cloud and foliage detail to avoid shimmer and wasted work at distance. If the fade is zero, skip the high-frequency calculation rather than multiplying an already-computed result by zero.
 4. Keep terrain and shadow vertex displacement mathematically identical.
 5. Do not add geometry or claim fuller silhouettes; shader-only foliage work must stay within existing vertex topology.
 6. Static CI checks and ZIP packaging are not GPU compilation, in-game visual validation or FPS benchmarking.
