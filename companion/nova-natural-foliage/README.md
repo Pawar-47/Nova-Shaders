@@ -21,7 +21,7 @@ It changes leaf block models, selected small-plant/shrub models and grass-block 
 
 ## Installation
 
-Place this ZIP in Minecraft's resourcepacks folder and enable it above any pack that replaces vanilla leaf or grass-block models. It uses the vanilla textures selected by the active pack. Test the final resource-pack stack for compatibility.
+Place this ZIP in Minecraft's resourcepacks folder and enable it above any pack that replaces vanilla leaf, selected plant or grass-block models. It uses the vanilla textures selected by the active pack. Test the final resource-pack stack for compatibility.
 
 ## License
 
