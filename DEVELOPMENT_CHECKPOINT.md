@@ -53,3 +53,13 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 4. Add reproducible Iris-compatible shader preprocessing / GLSL validation to CI if technically sound.
 5. Keep packaging and releases to the single shader ZIP.
 6. Update this checkpoint after each durable commit, including branch, commit SHA, CI run and explicit unverified items.
+
+
+## Validation update — 2026-11-20
+
+- GitHub Actions run `44618555950` completed successfully on the PR head `552f2191ce25fd1aa0df8b6a51d6b19718b0ac98`.
+- Job `Check, package and release`: VERSION validation, shader static checks, single shader ZIP packaging and artifact upload all passed. Release publication was correctly skipped because this was a pull-request run.
+- The run produced the shader-only artifact; no companion archive is built or uploaded by this workflow.
+- This supersedes the earlier note saying no PR workflow run was reported. The combined commit-status endpoint returned no separate status entries, but the workflow-run endpoint confirms the completed successful run.
+- Scope of this verification remains static source validation and ZIP packaging. It does not compile GLSL with a GPU driver, launch Minecraft/Iris, verify rendered appearance, or benchmark Intel HD 5500 performance.
+- PR #2 remains open pending review of the passing source changes and the remaining runtime-only validation. Do not mark the shader visually or performance complete without the target-machine test.
