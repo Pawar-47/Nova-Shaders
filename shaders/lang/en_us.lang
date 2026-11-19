@@ -1,0 +1,75 @@
+# Nova Shaders - English labels for the Shader Pack Settings screen.
+# Every option, screen and preset in shaders.properties is labelled here.
+
+screen.COLOR=Color
+screen.SCENE=Scene
+screen.QUALITY=Quality
+
+# --------------------------------------------------------------- Color ------
+option.COLOR_EXPOSURE=Exposure
+option.COLOR_EXPOSURE.comment=Brightness before the tonemapper. Raise it if the scene looks muddy, lower it if the sky blows out.
+option.COLOR_SATURATION=Saturation
+option.COLOR_SATURATION.comment=Colour strength of the final image. 1.0 leaves it untouched.
+option.COLOR_CONTRAST=Contrast
+option.COLOR_CONTRAST.comment=Pushes tones away from mid grey. 1.0 leaves the image untouched.
+option.COLOR_VIGNETTE=Vignette
+option.COLOR_VIGNETTE.comment=Darkens the corners of the screen. 0.0 disables it.
+option.COLOR_DITHER=Dither
+option.COLOR_DITHER.comment=Adds a fixed ordered pattern before output so slow sky gradients do not band.
+option.ANTI_ALIASING=Anti-aliasing
+option.ANTI_ALIASING.comment=FXAA. Smooths jagged edges for a few pixels of texture detail.
+
+# --------------------------------------------------------------- Scene ------
+option.SUN_STRENGTH=Sunlight
+option.SUN_STRENGTH.comment=Strength of direct sunlight, and of the dim blue moonlight at night.
+option.AMBIENT_STRENGTH=Skylight
+option.AMBIENT_STRENGTH.comment=Strength of the ambient light the sky itself provides. Also colours the shadows.
+option.BLOCKLIGHT_STRENGTH=Block light
+option.BLOCKLIGHT_STRENGTH.comment=Strength of warm light from torches, lava and glowstone.
+option.FOG_DENSITY=Fog
+option.FOG_DENSITY.comment=Thickness of the height fog. 0.0 removes it entirely.
+option.FOG_HEIGHT=Fog height
+option.FOG_HEIGHT.comment=Altitude at which the fog is thickest. Above it the air thins out.
+option.CLOUDS=Clouds
+option.CLOUDS.comment=Draws the procedural cloud sheet as part of the sky.
+option.CLOUD_COVERAGE=Cloud cover
+option.CLOUD_COVERAGE.comment=How much of the sky the clouds cover.
+option.CLOUD_ALTITUDE=Cloud height
+option.CLOUD_ALTITUDE.comment=Height of the cloud sheet in blocks.
+option.WATER_WAVES=Water waves
+option.WATER_WAVES.comment=Animates the water surface normal. Turning it off leaves flat, still water.
+option.WATER_WAVE_HEIGHT=Wave height
+option.WATER_WAVE_HEIGHT.comment=Height of the two wave trains and the small chop on top of them.
+option.UNDERWATER_TINT=Underwater tint
+option.UNDERWATER_TINT.comment=Tints and darkens the screen while the camera is under water.
+
+# ------------------------------------------------------------- Quality ------
+option.SHADOWS=Shadows
+option.SHADOWS.comment=Shadow mapping with four filtered taps. The single biggest speed win when off.
+option.SHADOW_SOFTNESS=Shadow softness
+option.SHADOW_SOFTNESS.comment=Spread of the four shadow lookup taps. 1.0 is a tight two by two filter.
+option.shadowMapResolution=Shadow resolution
+option.shadowMapResolution.comment=Size of the shadow map. 2048 is sharper and noticeably slower.
+option.shadowDistance=Shadow distance
+option.shadowDistance.comment=How far from the camera shadows are drawn. Beyond this distance the map fades out.
+option.CLOUD_OCTAVES=Cloud detail
+option.CLOUD_OCTAVES.comment=Noise octaves in the cloud sheet. Fewer is cheaper and blobbier.
+
+# On/off labels for the options that are really switches.
+value.SHADOWS.0=Off
+value.SHADOWS.1=On
+value.CLOUDS.0=Off
+value.CLOUDS.1=On
+value.WATER_WAVES.0=Off
+value.WATER_WAVES.1=On
+value.UNDERWATER_TINT.0=Off
+value.UNDERWATER_TINT.1=On
+value.ANTI_ALIASING.0=Off
+value.ANTI_ALIASING.1=On
+value.COLOR_DITHER.0=Off
+value.COLOR_DITHER.1=On
+
+# ------------------------------------------------------------------ Presets -
+profile.DEFAULT=Default
+profile.POTATO=Potato
+profile.comment=DEFAULT is the full pack. POTATO turns shadows and clouds off and thins the fog: try it first on integrated graphics.

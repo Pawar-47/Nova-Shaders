@@ -1,0 +1,111 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Needed to create the release and its tag.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Check, package and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Read VERSION
+        id: version
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          if ! printf '%s' "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            printf 'VERSION must look like 1.2.3, got "%s"\n' "$version" >&2
+            exit 1
+          fi
+          printf 'value=%s\n' "$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check the shader sources
+        run: bash tools/check_shaders.sh
+
+      - name: Package the shader pack
+        run: bash tools/package.sh
+
+      - name: Upload the shader pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-shaders-${{ steps.version.outputs.value }}
+          path: build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip
+          if-no-files-found: error
+
+      - name: Publish release v${{ steps.version.outputs.value }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v${{ steps.version.outputs.value }}"
+
+          # Additive only. An existing release keeps its tag and its assets, so a
+          # tag is never moved under anyone who already downloaded it. Bump
+          # VERSION to publish a new release.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            printf 'release %s already exists, leaving it untouched\n' "$tag"
+            exit 0
+          fi
+
+          notes="$RUNNER_TEMP/nova-shaders-notes.md"
+          cat > "$notes" <<'NOTES'
+          ## Nova Shaders 0.1.0
+
+          First public release: an original, MIT licensed shader pack for Iris, written
+          for low end hardware. One shadow map with four filtered taps, one procedural
+          noise field, and a two pass post chain instead of a deferred pipeline.
+
+          ### In this release
+
+          - Sun and moon directional lighting with a shadow map: four filtered taps,
+            slope scaled bias, normal offset, distance fade, and an option to switch it
+            off entirely
+          - Procedural sky: vertical gradient, sunset band that follows the sun,
+            sun disc, moon disc and a noise driven cloud sheet
+          - Exponential height fog that samples the same sky gradient, so the far plane
+            dissolves into the horizon
+          - Water with two crossed wave trains plus a chop term, Schlick Fresnel, a sky
+            reflection and a tight sun glint. Ice and stained glass share the model
+          - ACES tonemapping with exposure, saturation and contrast, plus an underwater tint
+          - FXAA, a subtle vignette and an ordered dither
+          - Three option screens (Color, Scene, Quality) and two presets, DEFAULT and POTATO
+
+          ### Deliberately not in 0.1.0
+
+          - Screen space terrain reflections in water
+          - Volumetric clouds
+          - Waving foliage
+          - Wet surfaces after rain
+          - PBR (LabPBR, POM) and parallax
+          - Dimension specific skies
+          - Stars, moon phases, coloured shadows, SSAO, bloom, TAA
+
+          ### Not benchmarked, and not run on a GPU by its author
+
+          This release is statically checked only: version lines, include resolution,
+          conditional balance, and option and language coverage. It has not been
+          compiled on a GPU or measured for frame rate. Please report anything that fails
+          to load or compile.
+
+          ### Worth testing first
+
+          Shadows (edges and acne), water from above and below, the cloud sheet at the
+          horizon, rain, and the Nether.
+          NOTES
+
+          gh release create "$tag" \
+            "build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip" \
+            --title "Nova Shaders $tag" \
+            --notes-file "$notes"

@@ -1,0 +1,10 @@
+# build output from tools/package.sh and the release workflow
+build/
+*.zip
+
+# editor and OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
