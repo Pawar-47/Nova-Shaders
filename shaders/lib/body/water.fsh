@@ -87,8 +87,12 @@ void main() {
     vec3 deepBody = vec3(0.013, 0.058, 0.080) * (0.35 + 0.85 * sky.day);
     body = mix(body, deepBody, depthFactor);
 
-    // Shallow water lets the bottom through; by a few blocks nothing does.
-    alpha = clamp(mix(albedo.a, mix(albedo.a * 0.85, 0.96, depthFactor), sheet), 0.0, 0.97);
+    // Translucent, never transparent. The bottom shows through tinted rather than
+    // clear, and the alpha no longer depends on whatever vanilla handed us: 0.68
+    // over a shallow bottom, 0.94 once the water is deep enough that nothing below
+    // would be visible anyway.
+    float depthAlpha = mix(0.68, 0.94, depthFactor);
+    alpha = clamp(mix(max(albedo.a, 0.62), depthAlpha, sheet), 0.0, 0.96);
 #endif
 
     vec3 reflection = novaWaterReflection(toEye, normal, sky);

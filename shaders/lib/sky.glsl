@@ -124,31 +124,37 @@ vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
     return vec3(0.80, 0.85, 1.00) * mottle * body * (1.0 - sky.day) * 1.6;
 }
 
-/* Puff field.
+/* Cloud field.
  *
- * Two noise fields: a low frequency mask decides where the cloud banks sit, and a
- * higher frequency field cuts each bank into puffs. A third, coarser ramp gives
- * every puff a soft shoulder, because a hard thresholded edge is exactly what
- * makes a cloud sheet look like paper. */
+ * One FBM at a small cell size, thresholded hard enough that what survives are
+ * separate little islands rather than a sheet, and domain warped so every island is
+ * lopsided.
+ *
+ * There is deliberately no large scale mask. A mask arranged the clouds into banks
+ * and left most of the sky empty - including straight overhead - because the patch
+ * of sky you see when you look up is only a couple of hundred blocks across and
+ * spans barely two cells of a coarse field. Small cells spread evenly fix both
+ * problems at once.
+ */
 float novaCloudDensity(vec2 worldXZ, vec2 wind, int octaves) {
-    vec2 p = worldXZ * 0.0090 + wind;
+    // Roughly forty blocks per cell, so the puffs overhead are small objects and
+    // not one sheet spanning the sky.
+    vec2 p = worldXZ * 0.0235 + wind;
 
-    float cluster = valueNoise(p * 0.19 + 17.3);
-    float clusterStart = mix(0.55, 0.22, saturate(CLOUD_COVERAGE));
-    float mask = smoothstep(clusterStart, clusterStart + 0.18, cluster);
+    // One low frequency sample, used both to warp the field and to vary how dense
+    // the puffs are from place to place.
+    float drift = valueNoise(p * 0.11 + 17.3);
+    vec2 warp = vec2(drift, fract(drift * 5.7 + 0.31)) - 0.5;
 
-    // Domain warp, driven by the cluster field that was sampled anyway: nudging the
-    // lookup by up to half a cell turns round blobs into billows, which is most of
-    // the difference between a puff and a cotton ball.
-    vec2 warp = vec2(cluster, fract(cluster * 5.7 + 0.31)) - 0.5;
-    vec2 billowed = p + warp * 0.60;
+    float n = fbm(p + warp * 1.15, octaves);
 
-    float n = fbm(billowed, octaves);
-    float puffStart = mix(0.52, 0.32, saturate(CLOUD_COVERAGE));
-    float puff = smoothstep(puffStart, puffStart + 0.18, n);
-    puff *= mix(0.70, 1.0, smoothstep(puffStart + 0.02, puffStart + 0.30, n));
+    float start = mix(0.64, 0.41, saturate(CLOUD_COVERAGE)) - drift * 0.06;
+    float puff = smoothstep(start, start + 0.09, n);
 
-    return puff * mask;
+    // A soft shoulder so a puff has a body between its core and its rim.
+    puff *= mix(0.78, 1.0, smoothstep(start + 0.04, start + 0.22, n));
+
+    return puff;
 }
 
 /* The shaded side of a cloud, before the sun side is added. */
@@ -178,7 +184,7 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
 
     float rayLength = altitude / direction.y;
     vec2 hit = cameraPosition.xz + direction.xz * rayLength;
-    vec2 wind = vec2(frameTimeCounter * 0.0075, frameTimeCounter * 0.0028);
+    vec2 wind = vec2(frameTimeCounter * 0.0180, frameTimeCounter * 0.0072);
 
     float density = novaCloudDensity(hit, wind, CLOUD_OCTAVES);
     if (density < 0.004) return skyColour;
@@ -203,11 +209,11 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     // Towards the horizon the sheet is seen almost edge on, so its noise becomes
     // sub pixel. Pull it towards the mean density there rather than letting it
     // shimmer, and let the sky behind it do the hazing.
-    float horizon = 1.0 - smoothstep(0.02, 0.28, direction.y);
-    float shaped = mix(density, 0.55, horizon * 0.75);
+    float horizon = 1.0 - smoothstep(0.02, 0.30, direction.y);
+    float shaped = mix(density, 0.38, horizon * 0.85);
 
-    float farFade = 1.0 - smoothstep(3000.0, 7000.0, rayLength);
-    float alpha = shaped * farFade * (1.0 - horizon * 0.35);
+    float farFade = 1.0 - smoothstep(5000.0, 10000.0, rayLength);
+    float alpha = shaped * farFade * (1.0 - horizon * 0.30);
 
     return mix(skyColour, cloudColour, saturate(alpha));
 #endif

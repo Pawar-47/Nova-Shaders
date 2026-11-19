@@ -8,7 +8,22 @@ and 12 GB of RAM on Windows. Every choice in it follows from that - a forward li
 instead of a deferred one, one shadow map with four filtered taps, one shared noise field,
 and two full screen passes where most packs have a dozen.
 
-Version **0.5.0**. MIT licensed. It has not been benchmarked (see below).
+Version **0.6.0**. MIT licensed. It has not been benchmarked (see below).
+
+## What changed in 0.6.0
+
+- **Clouds are small, lopsided puffs spread over the whole sky.** 0.5.0's field used cells
+  about a hundred blocks across plus a large scale mask that grouped them into banks, which
+  is exactly why the sky overhead looked empty: the patch you see when you look up is only a
+  couple of hundred blocks wide, so it spanned barely two cells, and the mask had usually
+  emptied it while the horizon packed thousands of blocks of cloud into a few degrees. The
+  mask is gone, the cells are about forty blocks, and the threshold now cuts the field into
+  separate islands spread evenly, each warped so it is not round. They drift four times
+  faster too.
+- **Water is translucent, not transparent.** The alpha no longer follows whatever vanilla
+  handed the program. A horizontal water sheet sits at 0.68 over a shallow bottom and 0.94
+  once it is deep, so the bottom shows through tinted rather than clear. Vertical faces keep
+  a floor of 0.62, so waterfalls stay juicy and glass panes stay glass.
 
 ## What changed in 0.5.0
 
@@ -88,10 +103,10 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
   hardware box filter), slope scaled bias, normal offset, edge and distance fades, and a
   switch to turn it off.
 - **Sky**: procedural vertical gradient, a sunset band that follows the sun across the
-  horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a cluster mask
-  decides where the banks sit, a domain warped FBM field cuts them into billows, and a second
-  sample towards the sun gives every puff a lit edge, a grey core and a silver lining. Vanilla
-  sun, moon and cloud geometry is discarded so nothing is drawn twice.
+  horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a domain warped FBM
+  field thresholded into small separate puffs spread evenly over the sky, each with a second
+  sample towards the sun for a lit edge, a grey core and a silver lining. Vanilla sun, moon
+  and cloud geometry is discarded so nothing is drawn twice.
 - **Fog**: light exponential height fog whose density drops with altitude, plus a squared
   distance term that only builds up far away, coloured by a desaturated air colour with a
   little warmth on the sun side.
@@ -108,7 +123,7 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 - **Shader Pack Settings**: three screens (Color, Scene, Quality) with sliders, and two
   presets, `DEFAULT` and `POTATO`.
 
-## What is deliberately not in 0.4.0
+## What is deliberately not in 0.6.0
 
 Not missing by accident - left out on purpose, and listed here so nobody has to guess:
 
