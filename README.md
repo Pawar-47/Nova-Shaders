@@ -17,7 +17,7 @@ Version **0.10.2**. MIT licensed; third-party MIT adaptations are recorded in
 - **Water is less see-through.** Horizontal water now keeps at least 72% blend opacity, rising with depth, so the bottom remains visible through a tinted body instead of looking like clear glass. Vertical water faces retain their separate blend floor.
 - **Target defaults are lighter.** The default shadow map is reduced from 1024 to 512 and shadow distance from 96 to 64 blocks for the Intel HD 5500 target. The 1024 option remains available for sharper shadows.
 
-These are source-level adjustments. Cloud count, water appearance and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed.
+These are source-level adjustments. Cloud count, water appearance and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit.
 
 ## What changed in 0.10.1
 
