@@ -231,8 +231,8 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     // The horizon intersects thousands of blocks of cloud slab. Fade to a broad,
     // low-frequency field before the fixed sample budget can turn it into dots.
     float horizonLod = smoothstep(30.0, 150.0, stepLength);
-    float fieldScale = mix(0.0400, 0.0012, horizonLod);
-    float detailScale = mix(0.0800, 0.0010, horizonLod);
+    float fieldScale = mix(0.0140, 0.0012, horizonLod);
+    float detailScale = mix(0.0500, 0.0010, horizonLod);
 
     // The fine detail is sampled once, midway; it only has to rag the threshold, it
     // does not have to travel with every step.
