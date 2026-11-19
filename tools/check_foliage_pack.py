@@ -100,6 +100,9 @@ for tint_mode in ("tinted", "untinted"):
     if plant_base.get("ambientocclusion") is not False:
         fail(f"natural_plant_{tint_mode}.json must disable ambient occlusion on thin crossed planes")
     for element in elements:
+        angle = element.get("rotation", {}).get("angle", 0)
+        if not isinstance(angle, (int, float)) or abs(angle / 22.5 - round(angle / 22.5)) > 1.0e-6:
+            fail(f"natural_plant_{tint_mode}.json uses a rotation unsupported by Minecraft 1.21.5")
         faces = element.get("faces", {})
         if not {"north", "south"}.issubset(faces):
             fail(f"natural_plant_{tint_mode}.json planes must render on both sides")
