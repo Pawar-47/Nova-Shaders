@@ -70,6 +70,32 @@ if grass_model:
     if grass_model.get("textures", {}).get("overlay") != "block/grass_block_side_overlay":
         fail("grass_block model must use the vanilla grass side overlay texture")
 
+plant_species = {
+    "short_grass": "tinted",
+    "fern": "tinted",
+    "seagrass": "tinted",
+    "dead_bush": "untinted",
+    "bush": "untinted",
+    "short_dry_grass": "untinted",
+    "tall_dry_grass": "untinted",
+    "nether_sprouts": "untinted",
+}
+for tint_mode in ("tinted", "untinted"):
+    plant_base = read_json(ROOT / f"assets/nova/models/block/natural_plant_{tint_mode}.json")
+    if plant_base and len(plant_base.get("elements", [])) != 3:
+        fail(f"natural_plant_{tint_mode}.json must contain three crossed plant planes")
+
+for name, tint_mode in plant_species.items():
+    state = read_json(ROOT / f"assets/minecraft/blockstates/{name}.json")
+    model = read_json(ROOT / f"assets/minecraft/models/block/{name}.json")
+    if not state or not isinstance(state.get("variants", {}).get(""), list) or len(state["variants"][""]) != 4:
+        fail(f"{name}.json blockstate must offer four horizontal rotations")
+    if model:
+        if model.get("parent") != f"nova:block/natural_plant_{tint_mode}":
+            fail(f"{name}.json must inherit the {tint_mode} plant model")
+        if model.get("textures", {}).get("cross") != f"minecraft:block/{name}":
+            fail(f"{name}.json must use its matching vanilla texture")
+
 for model_path in models:
     model = read_json(model_path)
     if not model:
