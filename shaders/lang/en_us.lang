@@ -78,4 +78,5 @@ value.COLOR_DITHER.1=On
 # ------------------------------------------------------------------ Presets -
 profile.DEFAULT=Default
 profile.POTATO=Potato
-profile.comment=Start with POTATO on an Intel HD Graphics 5500. It keeps clouds and shadows at lower quality; turn them off manually if performance is poor.
+profile.PERFORMANCE=Performance
+profile.comment=DEFAULT balances visuals and speed. POTATO uses fewer cloud samples and shorter shadows. PERFORMANCE disables the shadow render pass and FXAA to prioritize FPS on integrated graphics.
