@@ -25,7 +25,7 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 - Default shadow map 512px / 64 blocks; PERFORMANCE disables the shadow pass and FXAA.
 - Water: shared analytic wave height/slope; depth-derived Beer–Lambert absorption and in-scattering; horizontal opacity floor 0.82; sky reflection and restrained glint. High-frequency gradient noise is skipped beyond 72 blocks while analytic waves remain.
 - Foliage: biome-preserving warm/cool variation and sunset-aware backlighting. Ground plants use a `mc_midTexCoord` sprite-midpoint hinge; leaf blocks use separate material ID 103 and a continuous world-space wind field with slow canopy sway, tiny per-vertex flutter and a 96-block distance fade. Terrain and shadow passes use the same leaf displacement.
-- Clouds: asymmetric skewed field, near-view scales 0.014 / detail 0.050 fading to broad horizon LOD; four samples by default and no extra march samples added.
+- Clouds: asymmetric skewed field, near-view scales 0.014 / detail 0.050 fading to broad horizon LOD; four samples by default and no extra march samples added. The detail-noise lookup is skipped once the horizon LOD fades it out.
 - No SSAO, bloom, SSR or multi-ray volumetric lighting in the default path.
 
 ## Research reviewed on 2026-11-20
