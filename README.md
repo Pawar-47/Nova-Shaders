@@ -23,6 +23,7 @@ From **v0.10.4 onward**, Nova will be distributed as one shader pack only. The p
 - Leaves now have a separate shader material ID and a low-amplitude, continuous world-space vertex wind field. A slow canopy sway is layered with tiny per-vertex flutter; motion fades with distance and the same displacement is applied in the shadow pass.
 - Ground plants retain their sprite-midpoint hinge, separate from leaf-block motion. This is shader-only and does not add geometry or change vanilla models.
 - High-frequency water ripple noise is now skipped entirely beyond its 72-block detail range; the cheaper analytic wave slope remains.
+- The cloud detail-noise lookup is skipped when the horizon LOD has faded its contribution to zero.
 - Continued focus is on lightweight water and cloud improvements. Vanilla block geometry and world generation remain outside the shader's control.
 
 This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
