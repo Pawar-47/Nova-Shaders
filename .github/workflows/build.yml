@@ -83,7 +83,7 @@ jobs:
           ### Highlights
 
           - A separate optional Nova Natural Foliage Lite resource pack adds one randomized leaf-textured plane per vanilla leaf block and a grass-block side fringe to soften square silhouettes. It is packaged separately from the shader ZIP and is not enabled automatically.
-          - Cloud sampling uses a larger near-view field scale to avoid a uniform overhead patch, then fades to a broader field near the horizon; the target is roughly 15–20 asymmetric masses across a typical open-sky view.
+          - Cloud sampling uses a denser near-view field to separate overhead cloud islands, then fades to a broader field near the horizon; the target is roughly 15–20 asymmetric masses across a typical overhead open-sky view. The detail field follows the same skewed domain without adding ray-march samples.
           - Horizontal water retains at least 82% opacity and increases opacity with depth, avoiding a clear-glass appearance.
           - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
           - Foliage shading adds subtle warm/cool variation and sunset-aware backlighting while preserving biome tint.
