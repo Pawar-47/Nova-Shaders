@@ -14,9 +14,9 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 ## Repository baseline and release state
 
 - Main baseline inspected: `436c2e5d66622dac417092f00cb61dec13096d83`.
-- Published release v0.10.2 exists and historically contains both a shader ZIP and a companion foliage ZIP. Do not treat the companion as part of the current product direction.
-- Main contained an unreleased v0.10.3 preparation with companion pack validation and packaging. The `shader-only-research` branch is the working branch for removing that pack from source, CI and future releases.
-- The old v0.10.2 release is immutable under the current additive-only release workflow; future releases must contain only `nova-shaders-<version>-shaderpack.zip`.
+- Published releases v0.10.2 and v0.10.3 both historically contain a shader ZIP and a companion foliage ZIP. Those published assets have not been rewritten; they are not part of the current product direction.
+- Main currently points to v0.10.3. The `shader-only-research` branch removes the companion source and validator, and changes CI/package/release output to a single shader ZIP.
+- `VERSION` is now 0.10.4 so the next release will use a new tag rather than colliding with the already-published v0.10.3. Future releases must contain only `nova-shaders-<version>-shaderpack.zip`.
 - No changes should be merged or released until branch CI passes and the source-only archive is verified.
 
 ## Current shader implementation (source-level, not visually verified)
@@ -36,7 +36,8 @@ Last updated: 2026-11-20 — shader-only direction confirmed; companion resource
 
 ## Active review and verification status
 
-- PR #2: https://github.com/Pawar-47/Nova-Shaders/pull/2 — shader-only cleanup and per-leaf vertex wind. Working branch: `shader-only-research`.
+- PR #2: https://github.com/Pawar-47/Nova-Shaders/pull/2 — shader-only cleanup, per-leaf vertex wind and water distance gating. Working branch: `shader-only-research`.
+- Next release version prepared: v0.10.4. The v0.10.2 and v0.10.3 release pages still retain their historical companion ZIP assets.
 - Latest implementation checkpoint before this note: `946947648643749254e0003c71a7cb6e6889c0a9` (includes the latest main checkpoint as a merge parent).
 - The PR currently has no reported status checks / Actions run. The repository connector did not trigger the PR workflow, and a local clone attempt could not resolve github.com, so the changed checker and packaging script have not been executed in this environment.
 - Existing static shader checks and archive packaging have passed in previous runs.
