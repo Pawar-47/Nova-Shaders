@@ -9,7 +9,7 @@ march and two full-screen passes. It has not been benchmarked on this hardware, 
 performance guarantee is claimed; start with DEFAULT for balanced visuals, POTATO for a lighter
 cloud/shadow workload, or PERFORMANCE when FPS matters more than dynamic shadows and FXAA.
 
-Version **0.10.2**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.3**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
 
 An optional **Nova Natural Foliage Lite** companion resource pack is built separately
@@ -17,6 +17,12 @@ from the shader ZIP. It adds a single randomized angled leaf plane to vanilla le
 blocks, three-plane small grass/shrub models and a small grass-block side fringe to soften cube-shaped canopies and turf edges.
 It is experimental, adds geometry/overdraw, and should only be enabled if forest-scene
 FPS remains acceptable. It does not alter tree generation, branch placement, tall-grass/large-fern models or biome vegetation density.
+
+## What changed in 0.10.3
+
+- **Minecraft 1.21.5 foliage compatibility fix.** The three-plane plant models now use rotation angles that are multiples of 22.5 degrees, as required by the 1.21.5 model format. The foliage validator now rejects unsupported angles so the issue cannot silently return.
+
+The previous v0.10.2 shader and foliage improvements are retained. This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
 
 ## What changed in 0.10.2
 
