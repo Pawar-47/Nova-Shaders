@@ -8,7 +8,28 @@ and 12 GB of RAM on Windows. Every choice in it follows from that - a forward li
 instead of a deferred one, one shadow map with four filtered taps, one shared noise field,
 and two full screen passes where most packs have a dozen.
 
-Version **0.4.0**. MIT licensed. It has not been benchmarked (see below).
+Version **0.5.0**. MIT licensed. It has not been benchmarked (see below).
+
+## What changed in 0.5.0
+
+0.4.0's water still read as a moving sheet of tinted glass and the clouds as flat cut-outs.
+Both are rebuilt around the techniques behind the look this pack was asked to follow, written
+from scratch: no BSL file, function, constant or table was copied or transliterated, so the
+provenance rule below still holds.
+
+- **Water detail comes from noise now, not only sines.** Three swell trains carry the large
+  motion; on top of them sits the gradient of a noise field at roughly one block per cell.
+  That high frequency chop is what makes a surface read as water, and it fades with distance
+  instead of turning into pixel noise. The reflection now includes the sun and moon discs, so
+  the water picks up the sun path, and the glint is a broad sheen under a tight sparkle
+  rather than one flat dot.
+- **Clouds are billowed and rim lit.** The FBM lookup is domain warped by the cluster field,
+  which turns round blobs into billows, and a second sample towards the sun drives both a
+  stronger lit/shade split and a silver lining on the edges facing the light.
+- **Fog is much lighter.** The old height fog reached about 40% at 100 blocks, which washed
+  out everything within a few chunks. The height term is now weak enough to leave the near
+  field clear and a squared distance term takes over further out: roughly 10% at 100 blocks,
+  and the render edge still closes off by 500. Caves stopped misting up as well.
 
 ## What changed in 0.4.0
 
@@ -68,16 +89,15 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
   switch to turn it off.
 - **Sky**: procedural vertical gradient, a sunset band that follows the sun across the
   horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a cluster mask
-  decides where the banks sit, an FBM field cuts them into puffs, and a second sample taken
-  towards the sun shades each puff so it has a lit edge and a grey core. Vanilla sun, moon
-  and cloud geometry is discarded so nothing is drawn twice.
-- **Fog**: exponential height fog whose density drops with altitude, coloured by a
-  desaturated air colour with a little warmth on the sun side, so distance stays neutral
-  instead of turning blue.
-- **Water**: five swells plus two fine ripples summed into the surface normal, ripples faded
-  out with distance, Schlick Fresnel, a slightly desaturated sky reflection and a sun glint,
-  over a body that absorbs into a dark teal with depth, so deep water is opaque and shallow
-  water is not.
+  decides where the banks sit, a domain warped FBM field cuts them into billows, and a second
+  sample towards the sun gives every puff a lit edge, a grey core and a silver lining. Vanilla
+  sun, moon and cloud geometry is discarded so nothing is drawn twice.
+- **Fog**: light exponential height fog whose density drops with altitude, plus a squared
+  distance term that only builds up far away, coloured by a desaturated air colour with a
+  little warmth on the sun side.
+- **Water**: three swells plus a noise gradient chop summed into the surface normal, the chop
+  faded out with distance, Schlick Fresnel, a reflection of the sky including its sun and
+  moon, a two part sun glint, and a body that absorbs into a dark teal with depth.
 - **Lighting**: the sun with a small wrap so terminators are soft, a hemisphere ambient with
   cool light from above and warm bounce from the ground, and block light for torches and
   lava.
@@ -139,7 +159,11 @@ chop, the moon mottling and the dither are all generated in GLSL from one hash f
 `shaders/lib/util.glsl`.
 
 The techniques are standard and publicly documented, which is what makes them usable
-without borrowing code:
+without borrowing code. 0.5.0 follows the same well documented family of techniques that
+BSL Shaders is known for - noise gradient water detail, reflecting the sky and its sun in
+the water, a two sample cloud volume, domain warped cloud noise - and every line of it was
+written here. No BSL file, function, constant, coordinate table or structure was copied or
+transliterated.
 
 | Technique | Where |
 | --- | --- |
@@ -151,6 +175,8 @@ without borrowing code:
 | ACES filmic tonemapping (Narkowicz fit) | `shaders/lib/util.glsl` |
 | FXAA | `shaders/lib/body/final.fsh` |
 | Layered directional waves with distance fading | `shaders/lib/water.glsl` |
+| Noise gradient surface detail | `shaders/lib/water.glsl` |
+| Domain warped cloud field with two sample shading | `shaders/lib/sky.glsl` |
 
 ## Not benchmarked
 

@@ -137,7 +137,13 @@ float novaCloudDensity(vec2 worldXZ, vec2 wind, int octaves) {
     float clusterStart = mix(0.55, 0.22, saturate(CLOUD_COVERAGE));
     float mask = smoothstep(clusterStart, clusterStart + 0.18, cluster);
 
-    float n = fbm(p, octaves);
+    // Domain warp, driven by the cluster field that was sampled anyway: nudging the
+    // lookup by up to half a cell turns round blobs into billows, which is most of
+    // the difference between a puff and a cotton ball.
+    vec2 warp = vec2(cluster, fract(cluster * 5.7 + 0.31)) - 0.5;
+    vec2 billowed = p + warp * 0.60;
+
+    float n = fbm(billowed, octaves);
     float puffStart = mix(0.52, 0.32, saturate(CLOUD_COVERAGE));
     float puff = smoothstep(puffStart, puffStart + 0.18, n);
     puff *= mix(0.70, 1.0, smoothstep(puffStart + 0.02, puffStart + 0.30, n));
@@ -147,14 +153,14 @@ float novaCloudDensity(vec2 worldXZ, vec2 wind, int octaves) {
 
 /* The shaded side of a cloud, before the sun side is added. */
 vec3 novaCloudShade(NovaSky sky) {
-    vec3 colour = mix(vec3(0.10, 0.115, 0.14), vec3(0.56, 0.58, 0.63), sky.day);
-    return mix(colour, vec3(0.72, 0.56, 0.44), sky.sunset * 0.40);
+    vec3 colour = mix(vec3(0.09, 0.10, 0.13), vec3(0.43, 0.45, 0.50), sky.day);
+    return mix(colour, vec3(0.62, 0.48, 0.38), sky.sunset * 0.40);
 }
 
 /* The sun facing side. */
 vec3 novaCloudLit(NovaSky sky) {
-    vec3 colour = vec3(1.04, 1.02, 0.98) * (0.16 + 0.84 * sky.day);
-    return mix(colour, vec3(1.00, 0.72, 0.50), sky.sunset * 0.55);
+    vec3 colour = vec3(1.06, 1.04, 1.00) * (0.14 + 0.86 * sky.day);
+    return mix(colour, vec3(1.00, 0.74, 0.52), sky.sunset * 0.55);
 }
 
 /* Composite the cloud sheet over an already drawn sky colour.
@@ -177,12 +183,19 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     float density = novaCloudDensity(hit, wind, CLOUD_OCTAVES);
     if (density < 0.004) return skyColour;
 
-    // A low value here means this puff has nothing between it and the sun.
-    vec2 sunShift = normalize(sky.lightDir.xz + vec2(1.0e-4)) * 130.0;
-    float occlusion = novaCloudDensity(hit + sunShift, wind, CLOUD_OCTAVES);
-    float lit = saturate(1.0 - occlusion * 1.5 + 0.55);
+    // A second sample towards the sun, at two octaves because only the shape
+    // matters here: a low value means this face of the puff has clear air in front
+    // of the light, so it is a sunlit edge. High means it is buried in a bank.
+    vec2 sunShift = normalize(sky.lightDir.xz + vec2(1.0e-4)) * 120.0;
+    float occlusion = novaCloudDensity(hit + sunShift, wind, 2);
 
-    vec3 cloudColour = mix(novaCloudShade(sky), novaCloudLit(sky), lit);
+    float sunlit = saturate(1.0 - occlusion * 1.5 + density * 0.20);
+    vec3 cloudColour = mix(novaCloudShade(sky), novaCloudLit(sky), sunlit);
+
+    // Silver lining: dense here and clear towards the sun, so this is the edge of a
+    // puff with the light behind it.
+    float rim = saturate((density - occlusion) * 1.6);
+    cloudColour += novaCloudLit(sky) * rim * 0.30;
 
     // Rain flattens the whole sheet.
     cloudColour = mix(cloudColour, vec3(luma(cloudColour)) * 0.85, saturate(rainStrength) * 0.70);

@@ -17,12 +17,16 @@ float novaFogAmount(vec3 rayToPoint) {
     if (rayLength < 1.0e-3) return 0.0;
 
     float vertical = rayToPoint.y / rayLength;
-    float density = (1.0 / 190.0) * FOG_DENSITY * (1.0 + saturate(rainStrength) * 1.4);
 
-    if (isEyeInWater == 1) density *= 6.0;
+    // Light by default. The height term is weak enough to leave the near field
+    // clear, which is what "too much fog" was about, and the squared distance term
+    // does the work further out, so the far edge still closes off.
+    float density = (1.0 / 1400.0) * FOG_DENSITY * (1.0 + saturate(rainStrength) * 1.2);
+
+    if (isEyeInWater == 1) density *= 4.0;
 
     // Scale height of the exponential falloff, in blocks.
-    const float scaleHeight = 26.0;
+    const float scaleHeight = 40.0;
     float baseDensity = density * exp(-(cameraPosition.y - FOG_HEIGHT) / scaleHeight);
 
     float opticalDepth;
@@ -33,9 +37,9 @@ float novaFogAmount(vec3 rayToPoint) {
                      * scaleHeight / vertical;
     }
 
-    // A thin distance term on top, so the render distance never ends in a hard
-    // edge on flat ground where the height term is weak.
-    opticalDepth += rayLength * (1.0 / 2600.0) * FOG_DENSITY;
+    // Squared distance term: about 15% fog at 200 blocks and 65% at 500, while
+    // 100 blocks stays at roughly 10% in total.
+    opticalDepth += rayLength * rayLength * 4.5e-6 * FOG_DENSITY;
 
     return 1.0 - exp(-max(opticalDepth, 0.0));
 }

@@ -84,7 +84,7 @@ void main() {
     float sheet = smoothstep(0.55, 0.85, abs(geometricNormal.y));
     depthFactor *= sheet;
 
-    vec3 deepBody = vec3(0.016, 0.052, 0.068) * (0.35 + 0.85 * sky.day);
+    vec3 deepBody = vec3(0.013, 0.058, 0.080) * (0.35 + 0.85 * sky.day);
     body = mix(body, deepBody, depthFactor);
 
     // Shallow water lets the bottom through; by a few blocks nothing does.
@@ -97,11 +97,12 @@ void main() {
     // Ripples tilt the surface, so a little more sky reaches the eye than flat
     // water Fresnel suggests. The constant keeps distant water reading as a sheet
     // rather than as a mirror.
-    float reflectivity = clamp(fresnel * 1.10 + 0.05, 0.0, 0.90);
+    float reflectivity = clamp(fresnel * 1.15 + 0.06, 0.0, 0.92);
     vec3 colour = mix(body, reflection, reflectivity);
 
-    // Tight sun glint, and only where the light actually reaches the surface.
-    colour += novaSunlight(sky) * novaWaterGlint(toEye, normal, sky) * shadow * 6.0;
+    // Sun glint: a broad sheen under a tight sparkle, and only where the light
+    // actually reaches the surface.
+    colour += novaSunlight(sky) * novaWaterGlint(toEye, normal, sky) * shadow * 5.0;
 
 #ifndef NOVA_HAND
     colour = applyFog(colour, vPlayerPos, sky);

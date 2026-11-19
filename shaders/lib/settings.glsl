@@ -24,7 +24,7 @@
 #define SUN_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.25 1.5 2.0] Strength of direct sunlight, and of moonlight at night.
 #define AMBIENT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.25 1.5 2.0] Strength of the skylight ambient term.
 #define BLOCKLIGHT_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.25 1.5 2.0] Strength of warm block light: torches, lava, glowstone.
-#define FOG_DENSITY 1.0 // [0.0 0.5 0.75 1.0 1.25 1.5 2.0 3.0] Distance fog thickness. 0.0 removes the fog entirely.
+#define FOG_DENSITY 1.0 // [0.0 0.5 0.75 1.0 1.25 1.5 2.0 3.0] Fog strength. 1.0 is already light haze; raise it for mist, 0.0 removes it.
 #define FOG_HEIGHT 64.0 // [0.0 32.0 48.0 64.0 80.0 96.0 128.0] Altitude at which the fog is thickest. It thins out above this.
 #define CLOUDS 1 // [0 1] Draw the procedural cloud sheet.
 #define CLOUD_COVERAGE 0.45 // [0.0 0.2 0.35 0.45 0.6 0.8 1.0] How much of the sky the clouds cover. Low values give small scattered puffs, high values a broken deck.

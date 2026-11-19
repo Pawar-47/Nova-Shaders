@@ -4,30 +4,28 @@
 #include "/lib/util.glsl"
 #include "/lib/sky.glsl"
 
-/* Water surface: five swells plus two fine ripples.
+/* Water surface.
  *
- * The trick to water that does not look like corrugated iron is to never let two
- * wave trains line up. The directions here are a few degrees apart rather than
- * exactly crossed, the wavelengths are in an irrational ratio to each other, and
- * every train runs at its own speed. The result never repeats over the visible
- * area and has no visible grid, which is what the two crossed sines of the first
- * version produced.
+ * Three swell trains give the large motion: directions a few degrees apart,
+ * wavelengths in an irrational ratio, each running at its own speed, so they never
+ * line up into a visible grid. On top of that sits a noise gradient at roughly one
+ * block per cell, which is the high frequency detail that actually reads as water.
+ * Sines alone always look like corrugated iron from some angle; the noise is what
+ * makes the surface glitter and break up.
  *
- * The surface is a height field, so the normal is the sum of every train's
- * gradient tilted into the Y axis.
+ * The surface is a height field, so the normal is the sum of every gradient
+ * tilted into the Y axis.
  */
 
-const vec2 WAVE_DIRECTION[5] = vec2[5](
+const vec2 SWELL_DIRECTION[3] = vec2[3](
     vec2( 0.94,  0.34),
     vec2(-0.39,  0.92),
-    vec2( 0.66, -0.75),
-    vec2(-0.88, -0.47),
-    vec2( 0.21,  0.98)
+    vec2( 0.66, -0.75)
 );
 
-const float WAVE_LENGTH[5] = float[5](13.7, 8.3, 5.1, 3.3, 2.1);
-const float WAVE_SPEED[5] = float[5](0.62, -0.86, 1.13, -1.47, 1.91);
-const float WAVE_SLOPE[5] = float[5](0.105, 0.068, 0.045, 0.027, 0.016);
+const float SWELL_LENGTH[3] = float[3](12.9, 7.3, 4.1);
+const float SWELL_SPEED[3] = float[3](0.55, -0.82, 1.14);
+const float SWELL_SLOPE[3] = float[3](0.085, 0.060, 0.040);
 
 vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 #if WATER_WAVES == 0
@@ -38,27 +36,27 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 
     float time = frameTimeCounter;
     vec2 p = worldPos.xz;
+    float viewDistance = length(worldPos);
+
     vec2 slope = vec2(0.0);
 
-    for (int i = 0; i < 5; i++) {
-        float k = NOVA_TAU / WAVE_LENGTH[i];
-        float phase = dot(p, WAVE_DIRECTION[i]) * k + time * WAVE_SPEED[i];
-        slope += WAVE_DIRECTION[i] * (cos(phase) * k * WAVE_SLOPE[i]);
+    for (int i = 0; i < 3; i++) {
+        float k = NOVA_TAU / SWELL_LENGTH[i];
+        float phase = dot(p, SWELL_DIRECTION[i]) * k + time * SWELL_SPEED[i];
+        slope += SWELL_DIRECTION[i] * (cos(phase) * k * SWELL_SLOPE[i]);
     }
 
-    // Fine ripples on top. They fade out with distance, because ripples finer
-    // than a pixel turn into shimmer and noise on the horizon.
-    float viewDistance = length(worldPos);
-    float fineFade = 1.0 - saturate(viewDistance / 70.0);
-
-    if (fineFade > 0.01) {
-        vec2 dirA = vec2(0.28, 0.96);
-        float phaseA = dot(p, dirA) * 9.1 + time * 2.4;
-        slope += dirA * (cos(phaseA) * 9.1 * 0.0075) * fineFade;
-
-        vec2 dirB = vec2(-0.94, 0.33);
-        float phaseB = dot(p, dirB) * 12.3 - time * 2.9;
-        slope += dirB * (cos(phaseB) * 12.3 * 0.0055) * fineFade;
+    // Fine chop, as the gradient of a noise field. It fades out with distance so
+    // the far water does not dissolve into pixel noise, which is what ripples
+    // finer than a pixel turn into.
+    float detail = 1.0 - saturate(viewDistance / 90.0);
+    if (detail > 0.02) {
+        vec2 q = p * 0.9 + vec2(time * 0.22, -time * 0.17);
+        const float e = 0.35;
+        float n0 = valueNoise(q);
+        float nx = valueNoise(q + vec2(e, 0.0));
+        float nz = valueNoise(q + vec2(0.0, e));
+        slope += vec2(nx - n0, nz - n0) * (0.055 / e) * detail;
     }
 
     slope *= WATER_WAVE_HEIGHT;
@@ -73,26 +71,36 @@ float novaFresnel(float cosTheta) {
     return 0.02 + 0.98 * f2 * f2 * f;
 }
 
-/* What the surface mirrors: the sky, slightly desaturated so the water reads as
-   water and not as a sheet of blue paint. */
+/* What the surface mirrors: the sky, including the sun and the moon, pulled
+   slightly towards grey so the water reads as water and not as blue paint. */
 vec3 novaWaterReflection(vec3 toEye, vec3 normal, NovaSky sky) {
     vec3 reflected = reflect(-toEye, normal);
     reflected.y = abs(reflected.y);
 
     vec3 reflectedSky = novaSkyGradient(reflected, sky);
-    return mix(reflectedSky, vec3(luma(reflectedSky)), 0.20);
+    reflectedSky += novaSunDisc(reflected, sky) * 0.45;
+    reflectedSky += novaMoonDisc(reflected, sky) * 0.40;
+
+    return mix(reflectedSky, vec3(luma(reflectedSky)), 0.16);
 }
 
-/* One tight specular lobe: the sun on water is a handful of bright pixels that
-   jump between wave crests as the surface moves. */
+/* Sun glint: a broad sheen under a tight sparkle, so the highlight has a shape
+   instead of being one flat dot. */
 float novaWaterGlint(vec3 toEye, vec3 normal, NovaSky sky) {
     vec3 halfVector = normalize(toEye + sky.lightDir + vec3(1.0e-5));
     float angle = saturate(dot(normal, halfVector));
-    angle *= angle;
-    angle *= angle;              // ^4
-    angle *= angle;              // ^8
-    angle = angle * angle * angle;   // ^24
-    return angle * angle * angle * angle;   // ^96, broad enough to sparkle
+
+    float a2 = angle * angle;
+    float a4 = a2 * a2;
+    float a8 = a4 * a4;
+    float a16 = a8 * a8;
+    float a32 = a16 * a16;
+
+    float broad = a32 * a32;      // angle to the 64th
+    float mid = broad * broad;    // angle to the 128th
+    float tight = mid * mid;      // angle to the 256th
+
+    return broad * 0.30 + mid * 0.35 + tight * 0.55;
 }
 
 #endif

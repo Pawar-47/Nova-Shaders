@@ -63,14 +63,29 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.4.0
+          ## Nova Shaders 0.5.0
 
           An original, MIT licensed shader pack for Iris, written for low end hardware.
           One shadow map with four filtered taps, one procedural noise field, and a two
-          pass post chain instead of a deferred pipeline. 0.4.0 is a correction pass on
-          clouds, water, vegetation edges and lighting, on top of 0.3.0's channel controls.
+          pass post chain instead of a deferred pipeline. 0.5.0 rebuilds the water and the
+          clouds around the techniques behind the look this pack follows, and cuts the fog.
 
-          ### Changed in 0.4.0
+          ### Changed in 0.5.0
+
+          - Water detail is noise now, not only sines. Three swell trains carry the large
+            motion and the gradient of a noise field at about one block per cell supplies
+            the high frequency chop that actually reads as water, faded with distance so
+            far water does not turn into pixel noise
+          - The water reflection now includes the sun and moon discs, so the sun path
+            appears on the surface, and the glint is a broad sheen under a tight sparkle
+            instead of a single flat dot
+          - Clouds are domain warped by the cluster field, which turns round blobs into
+            billows, and a second sample towards the sun drives a stronger lit/shade split
+            plus a silver lining on the edges facing the light
+          - Fog is much lighter: about 10% at 100 blocks instead of 40%, with a squared
+            distance term taking over further out, and caves no longer mist up
+
+          ### Carried over from 0.4.0
 
           - Clouds have depth. A second density sample, taken towards the sun, shades every
             puff: light facing edges glow, thick cores go grey. Coverage is higher by
@@ -118,7 +133,7 @@ jobs:
           - FXAA, a subtle vignette and an ordered dither
           - Three option screens (Color, Scene, Quality) and two presets, DEFAULT and POTATO
 
-          ### Deliberately not in 0.4.0
+          ### Deliberately not in 0.5.0
 
           - Screen space terrain reflections in water
           - Volumetric clouds
@@ -137,9 +152,9 @@ jobs:
 
           ### Worth testing first
 
-          Cloud edges at the horizon, deep versus shallow water, glass panes (they should
-          still look like glass), leaf and grass edges in the middle distance, rain, and the
-          Nether.
+          Water close up and at a distance (the chop fades, it should not shimmer), the
+          water reflection at sunrise and sunset, cloud rims against the sun, how clear the
+          world looks at 100 blocks, glass panes, rain, and the Nether.
           NOTES
 
           gh release create "$tag" \
