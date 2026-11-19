@@ -43,9 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nova-shaders-${{ steps.version.outputs.value }}
-          path: |
-            build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip
-            build/nova-natural-foliage-${{ steps.version.outputs.value }}.zip
+          path: build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip
           if-no-files-found: error
 
       - name: Upload the optional foliage resource pack
