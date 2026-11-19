@@ -164,6 +164,10 @@ if ! grep -qF 'if (vVegetationBlock > 100.5)' "$shaders/lib/body/opaque.fsh" ||
    ! grep -qF 'if (vVegetationBlock > 101.5)' "$shaders/lib/body/opaque.fsh"; then
     fail "terrain shading does not distinguish vegetation from grass-block ID 102"
 fi
+if ! grep -qF 'vec3 foliageTint = mix(vec3(0.96, 1.03, 0.94),' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'vec3 transmissionTint = mix(vec3(0.025, 0.10, 0.015),' "$shaders/lib/body/opaque.fsh"; then
+    fail "foliage shading must preserve biome colour while adding subtle natural variation and backlight"
+fi
 if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/water.glsl" ||
    ! grep -qF 'float novaWaterSurfaceHeight(vec2 worldXZ)' "$shaders/lib/water_waves.glsl" ||
