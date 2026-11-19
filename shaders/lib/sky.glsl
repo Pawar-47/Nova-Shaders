@@ -231,13 +231,13 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     // The horizon intersects thousands of blocks of cloud slab. Fade to a broad,
     // low-frequency field before the fixed sample budget can turn it into dots.
     float horizonLod = smoothstep(30.0, 150.0, stepLength);
-    float fieldScale = mix(0.0055, 0.0015, horizonLod);
-    float detailScale = mix(0.0280, 0.0010, horizonLod);
+    float fieldScale = mix(0.0030, 0.0010, horizonLod);
+    float detailScale = mix(0.0140, 0.0008, horizonLod);
 
     // The fine detail is sampled once, midway; it only has to rag the threshold, it
     // does not have to travel with every step.
     vec2 midPoint = cameraPosition.xz + direction.xz * (tNear + tFar) * 0.5;
-    float horizonMass = valueNoise(midPoint * fieldScale + wind);
+    vec2 horizonXZ = vec2(midPoint.x + midPoint.y * 0.18,\n                          midPoint.y * 0.78 - midPoint.x * 0.11);\n    float horizonMass = valueNoise(horizonXZ * fieldScale + wind);
     float detail = valueNoise(midPoint * detailScale + wind);
 
     // Ordered dither helps hide march bands in the body, but is suppressed at the horizon.
