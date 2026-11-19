@@ -33,12 +33,12 @@ Confirmed by reading the sources, not by rendering:
 
 ## What 0.10.2 changes (unverified)
 
-- Cloud field frequency is reduced further and the domain is stretched/skewed to favour roughly 15–20 broad, irregular masses in a typical open-sky view; the four-step march and horizon LOD remain in place. Exact count varies with view and coverage.
-- Horizontal water alpha has a 0.72 floor, with depth-driven opacity retained.
+- Cloud field uses a larger near-view sampling scale (0.006) so overhead views are not reduced to one uniform patch, then fades to a broader 0.0012 field near the horizon. The target is roughly 15–20 broad, asymmetric masses in a typical open-sky view; exact count varies with view and coverage. The four-step march remains in place.
+- Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained.
 - Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
 - The target OS is Linux Mint, not Windows.
 
-No shader compile, in-game visual check or FPS benchmark has been performed for these changes.
+No shader compile, in-game visual check or FPS benchmark has been performed for these changes. The latest cloud scale and 0.82 water floor are source changes only; compare overhead cloud coverage and shallow/deep water in-game before calling them visually complete.
 
 ## What 0.10.1 changes (unverified)
 
