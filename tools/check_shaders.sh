@@ -278,6 +278,8 @@ def model_path(ref):
     return models / namespace / "models" / f"{name}.json"
 
 def inspect_model(path, seen):
+    if path.name == "block.json" and path.parent.name == "models":
+        return  # Minecraft built-in parent: block/block
     if path in seen or not path.is_file():
         if not path.is_file():
             errors.append(f"missing model: {path.relative_to(root)}")
