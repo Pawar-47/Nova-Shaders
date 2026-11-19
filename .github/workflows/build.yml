@@ -87,6 +87,7 @@ jobs:
           - Horizontal water retains at least 82% opacity and increases opacity with depth, avoiding a clear-glass appearance.
           - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
           - The PERFORMANCE preset disables the actual Iris shadow render pass and FXAA while keeping clouds and water enabled.
+          - The optional foliage pack also gives selected grasses, ferns, bushes and dry plants three crossed planes for fuller silhouettes; tall grass and large fern remain vanilla.
           - Foliage shading adds subtle warm/cool variation and sunset-aware backlighting while preserving biome tint.
           - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
             plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
