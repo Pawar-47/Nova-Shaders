@@ -21,6 +21,9 @@ in vec2 vLightCoord;
 in vec4 vTint;
 in vec3 vNormal;
 in vec3 vPlayerPos;
+#ifdef NOVA_WATER_MATERIAL_ID
+flat in float vWaterBlock;
+#endif
 
 /* DRAWBUFFERS:0 */
 
@@ -45,9 +48,12 @@ void main() {
 
 #ifdef NOVA_HAND
     vec3 normal = geometricNormal;
+#elif defined(NOVA_WATER_MATERIAL_ID)
+    // Only actual water receives wave normals; ice and glass retain their shape.
+    vec3 normal = vWaterBlock > 0.5
+        ? novaWaterNormal(cameraPosition + vPlayerPos, geometricNormal)
+        : geometricNormal;
 #else
-    // vPlayerPos is camera-relative; add the camera origin so waves stay fixed
-    // to the world instead of sliding with the view.
     vec3 normal = novaWaterNormal(cameraPosition + vPlayerPos, geometricNormal);
 #endif
 
@@ -75,6 +81,9 @@ void main() {
 
     // Vertical faces keep vanilla's translucency; only water-like sheets get depth.
     sheet = smoothstep(0.55, 0.85, abs(geometricNormal.y));
+#ifdef NOVA_WATER_MATERIAL_ID
+    sheet *= vWaterBlock;
+#endif
 #endif
 
     // Keep a restrained biome contribution, then absorb it through the water column.

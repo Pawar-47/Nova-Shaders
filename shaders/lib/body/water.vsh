@@ -1,9 +1,8 @@
 #ifndef NOVA_BODY_WATER_VSH
 #define NOVA_BODY_WATER_VSH
 
-/* Water needs exactly the same vertex data as an opaque surface: the wave
-   normal is built in world space inside the fragment stage, so there is no
-   reason to compute anything differently here. */
+/* Water reuses the opaque vertex path, with an Iris material ID to displace
+   actual water vertices as well as shading their normals in the fragment stage. */
 
 #include "/lib/body/opaque.vsh"
 

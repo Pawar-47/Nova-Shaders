@@ -63,36 +63,36 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.8.0
+          ## Nova Shaders 0.9.0
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
-          This release includes limited MIT-licensed adaptations from Glimmer and Spectrum;
-          see THIRD-PARTY-NOTICES.txt. The exact target GPU and performance have not been verified.
+          The exact target GPU and performance have not been verified. MIT-licensed adaptations
+          from Glimmer and Spectrum are documented in THIRD-PARTY-NOTICES.txt.
 
           ### Highlights
 
-          - World-anchored water waves combine two analytic directional slopes and a fine noise
-            octave. WATER_WAVE_HEIGHT controls the waves, and the view-angle fade approaches world up.
-          - Horizontal water sheets use per-channel Beer-Lambert attenuation, restrained
-            in-scattering and depth-derived opacity. Vertical translucent surfaces keep their
-            separate blending path.
-          - Clouds use a height-profiled slab and a compact anisotropic scattering term, without
-            secondary light marches. The default is four cloud steps; POTATO uses three.
-          - Terrain cutouts use distance-faded alpha-coverage dithering, matched in the shadow pass.
-            Other opaque programs keep their low cutoff; translucent entities retain alpha for blending.
-          - Daylight ambient and sky colours are less blue; separate red, green and blue controls
-            remain available in the Color settings.
+          - Iris block ID 100 enables low-amplitude vertex displacement on water, alongside the
+            animated wave normal and depth-based water body. WATER_WAVE_HEIGHT controls both.
+          - Iris tag ID 101 adds gentle world-anchored sway to leaves, flowers, saplings and crops;
+            the same offset is used by the shadow pass.
+          - Cloud coverage and absorption are stronger, with four cloud samples by default.
+            POTATO keeps clouds and shadows enabled at three samples and a 512-pixel shadow map
+            with a 48-block range; both can still be disabled manually for performance.
+          - Daylight direct light and sky/ground ambient contrast are stronger; separate red, green
+            and blue controls remain available in the Color settings.
+          - Terrain cutouts retain distance-faded alpha-coverage dithering, matched in the shadow pass.
 
           ### Not benchmarked
 
           The sources have not been GPU-compiled, visually checked in Minecraft, or benchmarked.
-          The repository includes a static checker, but passing it does not establish GPU
-          compatibility or performance. No frame-rate claims are made.
+          The static checker does not establish GPU compatibility or performance. No frame-rate
+          claims are made.
 
           ### Worth testing first
 
-          Cloud edges and shading at noon and sunset; water near and far, shallow and deep, and
-          underwater; translucent entities, leaves and their shadows; rain; and the Nether.
+          Water surface movement and reflections near and far; vegetation motion and matching
+          shadows; cloud edges and shading at noon and sunset; translucent entities, rain, and the
+          Nether; and performance on the exact target GPU.
           NOTES
 
           gh release create "$tag" \

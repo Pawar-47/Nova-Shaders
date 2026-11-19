@@ -25,7 +25,7 @@ float novaLightLevel(float coordinate) {
 vec3 novaSunlight(NovaSky sky) {
     vec3 warm = mix(vec3(1.00, 0.97, 0.92), vec3(1.00, 0.68, 0.42), sky.sunset * 0.90);
     vec3 colour = mix(vec3(0.34, 0.40, 0.56), warm, sky.day);
-    float strength = mix(0.16, 0.58, sky.day);
+    float strength = mix(0.16, 0.68, sky.day);
     return colour * strength * SUN_STRENGTH;
 }
 
@@ -37,8 +37,8 @@ vec3 novaSunlight(NovaSky sky) {
  * so the colour still comes from the texture.
  */
 vec3 novaAmbient(NovaSky sky, vec3 normal) {
-    vec3 fromSky = vec3(0.64, 0.68, 0.70);
-    vec3 fromGround = vec3(0.59, 0.54, 0.47);
+    vec3 fromSky = vec3(0.56, 0.60, 0.63);
+    vec3 fromGround = vec3(0.34, 0.32, 0.29);
     float up = normal.y * 0.5 + 0.5;
 
     vec3 day = mix(fromGround, fromSky, up);

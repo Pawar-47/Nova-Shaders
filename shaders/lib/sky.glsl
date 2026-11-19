@@ -159,7 +159,7 @@ float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind) {
 
 /* The shaded side of a cloud: a cool slate blue, never black. */
 vec3 novaCloudShade(NovaSky sky) {
-    vec3 colour = mix(vec3(0.055, 0.065, 0.085), vec3(0.36, 0.39, 0.44), sky.day);
+    vec3 colour = mix(vec3(0.040, 0.050, 0.070), vec3(0.28, 0.31, 0.36), sky.day);
     return mix(colour, vec3(0.52, 0.40, 0.32), sky.sunset * 0.45);
 }
 
@@ -258,7 +258,7 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
             heightLight *= 1.0 - density * 0.42;
             heightLight = mix(heightLight, 1.0, scattering * 0.65);
 
-            float absorb = 1.0 - exp(-density * stepLength * 0.055);
+            float absorb = 1.0 - exp(-density * stepLength * 0.075);
             lit += heightLight * absorb * transmittance;
             absorbed += absorb * transmittance;
             transmittance *= 1.0 - absorb;

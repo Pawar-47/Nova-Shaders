@@ -39,7 +39,8 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
     vec3 chop = valueNoiseGradient(p * 0.125 + vec2(time * 0.10, -time * 0.10));
 
     vec2 slope = directionA * swellA + directionB * swellB + chop.yz * 0.030 * fineFade;
-    slope *= WATER_WAVE_HEIGHT * (1.0 + saturate(rainStrength) * 0.25);
+    // The extra scale makes normal motion legible at ordinary viewing angles.
+    slope *= WATER_WAVE_HEIGHT * 2.0 * (1.0 + saturate(rainStrength) * 0.25);
 
     // Rain roughens the surface slightly. The normal's vertical axis is Y.
     float flatness = 1.0 - saturate(rainStrength) * 0.08;
@@ -78,7 +79,7 @@ float novaWaterOpacity(float thickness) {
    colour at grazing angles instead of becoming a full sheet of sky. */
 float novaFresnel(float cosTheta) {
     float f = 1.0 - saturate(cosTheta);
-    return 0.02 + 0.73 * f * f;
+    return 0.04 + 0.78 * f * f;
 }
 
 /* What the surface mirrors: the sky, pulled slightly towards grey. */
@@ -94,7 +95,7 @@ vec3 novaWaterReflection(vec3 toEye, vec3 normal, NovaSky sky) {
 float novaWaterGlint(vec3 toEye, vec3 normal, NovaSky sky) {
     vec3 reflected = reflect(-toEye, normal);
     float aligned = max(dot(normalize(reflected), sky.lightDir), 0.0);
-    return smoothstep(0.995, 1.0, aligned) * 3.0;
+    return smoothstep(0.985, 0.999, aligned) * 2.5;
 }
 
 #endif

@@ -11,6 +11,7 @@
 #   * preprocessor conditionals balance in every file
 #   * options used by shaders.properties exist in the shaders and have a label
 #     in shaders/lang/en_us.lang
+#   * water and vegetation block mappings agree with their shader interfaces
 #   * pack.mcmeta is valid JSON and VERSION is a plain version number
 
 set -uo pipefail
@@ -27,7 +28,7 @@ section() { printf '\n== %s\n' "$*"; }
 
 section "layout"
 
-for required in shaders/shaders.properties shaders/lang/en_us.lang pack.mcmeta LICENSE THIRD-PARTY-NOTICES.txt VERSION; do
+for required in shaders/shaders.properties shaders/lang/en_us.lang shaders/block.properties pack.mcmeta LICENSE THIRD-PARTY-NOTICES.txt VERSION; do
     [ -e "$root/$required" ] || fail "missing $required"
 done
 
@@ -88,7 +89,7 @@ printf '%d programs\n' "${#bases[@]}"
 
 section "includes"
 
-mapfile -t sources < <(find "$shaders" -type f \( -name '*.vsh' -o -name '*.fsh' -o -name '*.glsl' \) | sort)
+mapfile -t sources < <(find "$shaders" -type f \( -name '*.vsh' -o -name '*.fsh' -o -name '*.glsl' -o -name 'block.properties' \) | sort)
 
 for file in "${sources[@]}"; do
     dir="$(dirname "$file")"
@@ -107,6 +108,54 @@ while IFS= read -r file; do
         fail "${file#"$root"/}: a library file must not declare #version"
     fi
 done < <(find "$shaders/lib" -type f | sort)
+
+section "material mappings"
+
+block_props="$shaders/block.properties"
+if [ -f "$block_props" ]; then
+    if ! grep -qE '^[[:space:]]*block\.100[[:space:]]*=[[:space:]]*minecraft:water([[:space:]]|$)' "$block_props"; then
+        fail "shaders/block.properties: block ID 100 must map to minecraft:water"
+    fi
+    if ! grep -qE '^[[:space:]]*block\.101[[:space:]]*=' "$block_props"; then
+        fail "shaders/block.properties: block ID 101 must map vegetation tags"
+    fi
+    for tag in leaves flowers tall_flowers saplings crops; do
+        if ! grep -qE "(^|[[:space:]])%minecraft:$tag([[:space:]]|$)" "$block_props"; then
+            fail "shaders/block.properties: vegetation mapping is missing %minecraft:$tag"
+        fi
+    done
+fi
+
+if ! grep -qF 'in vec2 mc_Entity;' "$shaders/lib/body/opaque.vsh"; then
+    fail "opaque vertex body does not declare Iris mc_Entity"
+fi
+if ! grep -qF 'in vec2 mc_Entity;' "$shaders/lib/body/shadow.vsh"; then
+    fail "shadow vertex body does not declare Iris mc_Entity"
+fi
+if ! grep -qF 'uniform mat4 shadowModelViewInverse;' "$shaders/lib/uniforms.glsl"; then
+    fail "shadow vegetation sway requires shadowModelViewInverse"
+fi
+if ! grep -qF 'mc_Entity.x == 100.0' "$shaders/lib/body/opaque.vsh"; then
+    fail "water shader block ID does not match block.properties ID 100"
+fi
+if ! grep -qF 'mc_Entity.x == 101.0' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'mc_Entity.x == 101.0' "$shaders/lib/body/shadow.vsh"; then
+    fail "vegetation shader block ID does not match block.properties ID 101 in both passes"
+fi
+if ! grep -qF 'flat out float vWaterBlock;' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'flat in float vWaterBlock;' "$shaders/lib/body/water.fsh"; then
+    fail "water material ID varying is not paired between vertex and fragment bodies"
+fi
+for entry in gbuffers_water.vsh gbuffers_water.fsh; do
+    if ! grep -qF '#define NOVA_WATER_MATERIAL_ID' "$shaders/$entry"; then
+        fail "$entry does not enable the water material ID path"
+    fi
+done
+for entry in gbuffers_terrain.vsh shadow.vsh; do
+    if ! grep -qF '#define NOVA_VEGETATION_SWAY' "$shaders/$entry"; then
+        fail "$entry does not enable vegetation sway"
+    fi
+done
 
 section "preprocessor balance"
 

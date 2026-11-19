@@ -43,9 +43,9 @@ option.CLOUD_COVERAGE.comment=How much of the sky the clouds cover. Low values g
 option.CLOUD_ALTITUDE=Cloud height
 option.CLOUD_ALTITUDE.comment=Height of the cloud sheet in blocks.
 option.WATER_WAVES=Water waves
-option.WATER_WAVES.comment=Animates the water surface normal. Turning it off leaves flat, still water.
+option.WATER_WAVES.comment=Animates the water surface shape and normal. Turning it off leaves flat, still water.
 option.WATER_WAVE_HEIGHT=Wave height
-option.WATER_WAVE_HEIGHT.comment=Strength of two directional swells and fine ripples; zeroing waves leaves the surface flat.
+option.WATER_WAVE_HEIGHT.comment=Strength of the surface displacement and animated normals; zeroing waves leaves the surface flat.
 option.UNDERWATER_TINT=Underwater tint
 option.UNDERWATER_TINT.comment=Tints and darkens the screen while the camera is under water.
 
@@ -78,4 +78,4 @@ value.COLOR_DITHER.1=On
 # ------------------------------------------------------------------ Presets -
 profile.DEFAULT=Default
 profile.POTATO=Potato
-profile.comment=DEFAULT is the full pack. POTATO turns shadows and clouds off and thins the fog: try it first on integrated graphics.
+profile.comment=DEFAULT uses the full settings. POTATO keeps clouds and shadows at lower quality; turn them off manually if integrated graphics still struggles.
