@@ -14,7 +14,7 @@ Last updated: 0.10.2 branch (cloud/water refinements, optional foliage models an
 
 - Repository: `https://github.com/Pawar-47/Nova-Shaders.git`.
 - `main` was at `a7bf008` (v0.10.1) when this work started. Active work branch: `natural-visuals-0.10.2`; pull request: `https://github.com/Pawar-47/Nova-Shaders/pull/1`.
-- v0.10.2 is proposed on the PR branch and is not yet merged or released. Latest confirmed PR workflow run `44616457353` passed on head `ad050bc`: shader checks, companion-pack validation, both ZIP builds and both artifact uploads passed. Release publication was correctly skipped because this is a pull request.
+- v0.10.2 is proposed on the PR branch and is not yet merged or released. Latest confirmed PR workflow run `44616669319` passed on head `5eee702`: shader checks, companion-pack validation, both ZIP builds and both artifact uploads passed. Release publication was correctly skipped because this is a pull request.
 - The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No third-party shader or resource-pack model files were copied; Glimmer and Spectrum remain the only shader source adaptations. The Edgy Foliage grass-edge approach is attributed in the companion notices.
 - Added `companion/nova-natural-foliage/`, an original optional MIT resource pack: one randomized angled plane per vanilla leaf block; three crossed planes for short grass, fern, seagrass, dead bush, bush, short/tall dry grass and Nether sprouts; and a grass-block side fringe. Tall grass and large fern remain vanilla. Snow-covered grass keeps the vanilla `grass_block_snow` model. The pack is built as a separate ZIP and validated by `tools/check_foliage_pack.py`. Geometry cost and compatibility are not yet benchmarked.
 
@@ -53,7 +53,7 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 
 ## Verification status
 
-- GitHub Actions run `44616457353` passed on commit `ad050bc`: shader source checks, optional foliage JSON/reference checks (including all selected plant models and snowy grass fallback), packaging of both ZIPs, and upload of both artifacts all succeeded. The two artifacts are `nova-shaders-0.10.2` and `nova-natural-foliage-0.10.2`; the release step was correctly skipped on the pull-request branch.
+- GitHub Actions run `44616669319` passed on commit `5eee702`: shader source checks, optional foliage JSON/reference checks (including all selected plant models, snowy grass fallback, two-sided plant planes, and tint-index rules), packaging of both ZIPs, and upload of both artifacts all succeeded. The two artifacts are `nova-shaders-0.10.2` and `nova-natural-foliage-0.10.2`; the release step was correctly skipped on the pull-request branch.
 - This is static validation and archive packaging only. The shaders have not been compiled by a GLSL driver, loaded in Iris, rendered in Minecraft, or benchmarked on the Intel HD 5500.
 - The balanced overhead cloud field (0.014 near-view scale and 0.050 detail scale), matching source-check assertion, cutout-mipped leaf render-layer check, horizontal-only water opacity floor, `PERFORMANCE` preset, and optional leaf/plant models plus the snowy grass-state fallback are included in this passing run.
 - `PERFORMANCE` sets `SHADOWS=0`; Iris's conditional `shadow.enabled = false` disables the shadow render pass itself, not just fragment shadow sampling. FXAA is also disabled; clouds and water remain enabled.
