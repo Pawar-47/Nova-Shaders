@@ -77,12 +77,11 @@ jobs:
           - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
           - The PERFORMANCE preset disables the actual Iris shadow render pass and FXAA while keeping clouds and water enabled.
           - Foliage shading adds subtle warm/cool variation and sunset-aware backlighting while preserving biome tint.
-          - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
-            plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
-            bends the cast shadow by the identical weight.
-          - block.properties keeps the Iris tag form and adds an explicit 1.21.5 leaf, plant,
-            flower, sapling and crop fallback list, so the vegetation block ID cannot silently go
-            unassigned on a loader without tag support.
+          - Ground plants use a sprite-midpoint hinge; leaf blocks use a separate low-amplitude,
+            continuous world-space vertex wind field with slow canopy sway and subtle per-vertex
+            flutter. The motion fades with distance and is matched in the shadow pass.
+          - block.properties assigns separate Iris material IDs to leaves, ground plants and
+            grass blocks, with explicit 1.21.5 fallback mappings when tag support is unavailable.
           - Block ID 102 keeps grass blocks on top-face colour variation only; full cubes are not
             sheared by the wind.
           - The README now records this pipeline's ceilings - four cloud samples over a long slab,
