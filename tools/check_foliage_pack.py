@@ -54,6 +54,16 @@ for state_path in blockstates:
         if not model_path.is_file():
             fail(f"{state_path.name} references missing {model_path.name}")
 
+grass_state = read_json(ROOT / "assets/minecraft/blockstates/grass_block.json")
+grass_model = read_json(ROOT / "assets/minecraft/models/block/grass_block.json")
+if not grass_state or grass_state.get("variants", {}).get("", {}).get("model") != "minecraft:block/grass_block":
+    fail("grass_block blockstate must point to the companion grass-block model")
+if grass_model:
+    if len(grass_model.get("elements", [])) != 2:
+        fail("grass_block model must contain the vanilla cube and one edge-fringe overlay")
+    if grass_model.get("textures", {}).get("overlay") != "block/grass_block_side_overlay":
+        fail("grass_block model must use the vanilla grass side overlay texture")
+
 for model_path in models:
     model = read_json(model_path)
     if not model:
