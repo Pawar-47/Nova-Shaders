@@ -1,0 +1,6 @@
+{
+  "parent": "nova:block/natural_leaves",
+  "textures": {
+    "all": "minecraft:block/mangrove_leaves"
+  }
+}
