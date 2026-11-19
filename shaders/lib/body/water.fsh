@@ -12,6 +12,10 @@
 
 uniform sampler2D gtexture;
 
+/* Everything opaque: the ground under the water. Reading it back is what lets
+   the water know how deep it is. */
+uniform sampler2D depthtex1;
+
 in vec2 vTexCoord;
 in vec2 vLightCoord;
 in vec4 vTint;
@@ -22,10 +26,17 @@ in vec3 vPlayerPos;
 
 layout(location = 0) out vec4 fragColor;
 
-/* Translucent surfaces: water, ice and stained glass all share this program,
-   so the model is a tinted body with a Fresnel weighted sky reflection on top.
-   A block with a flat tint (glass) ends up looking like a dark mirror, water
-   ends up looking like water. */
+/* Distance from the camera to whatever opaque surface sits behind a fragment, in
+   blocks. Unprojecting through the inverse projection is exact and costs one
+   matrix multiply. A depth of 1.0 is sky, which lands on the clamp. */
+float novaSceneDistance(float depth) {
+    vec4 view = gbufferProjectionInverse * vec4(0.0, 0.0, depth * 2.0 - 1.0, 1.0);
+    return -view.z / max(abs(view.w), 1.0e-4);
+}
+
+/* Translucent surfaces: water, ice and stained glass all share this program, so
+   the model is a body with a Fresnel weighted sky reflection on top. The body is
+   the biome tint under the light, absorbing into a dark teal with depth. */
 
 void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
@@ -53,10 +64,32 @@ void main() {
 
     vec3 light = novaSurfaceLight(normal, NdotL, vLightCoord, shadow, sky);
     vec3 body = albedo.rgb * light;
+    float alpha = albedo.a;
 
-    // Absorption: water loses red first, so what made it through the surface
-    // shifts slightly green. Kept gentle so the biome colour still shows.
-    body = mix(body, body * vec3(0.80, 0.96, 1.00), 0.55);
+#ifndef NOVA_HAND
+    // How much water sits between this fragment and the ground behind it. This is
+    // what makes water a body rather than a pane of glass: shallow water shows
+    // the bottom, deep water absorbs it and turns blue-green.
+    float surfaceDistance = novaSceneDistance(gl_FragCoord.z);
+    float behind = texture(depthtex1, gl_FragCoord.xy / vec2(viewWidth, viewHeight)).r;
+    float thickness = clamp(novaSceneDistance(behind) - surfaceDistance, 0.0, 48.0);
+    float depthFactor = saturate(1.0 - exp(-thickness * 0.22));
+
+    // Seen from below, the sky is behind the surface and it has to stay bright.
+    if (isEyeInWater == 1) depthFactor *= 0.35;
+
+    // Water is always a horizontal sheet; glass is usually a pane. Keying the
+    // depth effect off the surface orientation keeps vertical windows looking
+    // like windows while water still gets its body.
+    float sheet = smoothstep(0.55, 0.85, abs(geometricNormal.y));
+    depthFactor *= sheet;
+
+    vec3 deepBody = vec3(0.016, 0.052, 0.068) * (0.35 + 0.85 * sky.day);
+    body = mix(body, deepBody, depthFactor);
+
+    // Shallow water lets the bottom through; by a few blocks nothing does.
+    alpha = clamp(mix(albedo.a, mix(albedo.a * 0.85, 0.96, depthFactor), sheet), 0.0, 0.97);
+#endif
 
     vec3 reflection = novaWaterReflection(toEye, normal, sky);
     float fresnel = novaFresnel(dot(normal, toEye));
@@ -74,7 +107,7 @@ void main() {
     colour = applyFog(colour, vPlayerPos, sky);
 #endif
 
-    fragColor = vec4(colour, albedo.a);
+    fragColor = vec4(colour, alpha);
 }
 
 #endif

@@ -8,7 +8,25 @@ and 12 GB of RAM on Windows. Every choice in it follows from that - a forward li
 instead of a deferred one, one shadow map with four filtered taps, one shared noise field,
 and two full screen passes where most packs have a dozen.
 
-Version **0.3.0**. MIT licensed. It has not been benchmarked (see below).
+Version **0.4.0**. MIT licensed. It has not been benchmarked (see below).
+
+## What changed in 0.4.0
+
+- **Clouds have depth now.** Each puff is shaded with a second density sample taken towards
+  the sun, so an edge facing the light glows and a thick core goes grey: the sheet reads as
+  a volume instead of a flat cut-out. Coverage is higher by default, and near the horizon
+  the noise is averaged towards its mean instead of being faded away, so there is a cloud
+  deck down to the skyline without it shimmering.
+- **Water is a body, not a pane.** The water program reads the opaque depth buffer to work
+  out how much water sits between the surface and the ground, absorbs the body colour into a
+  dark teal and closes the alpha up as it gets deeper. Shallow water still shows the bottom
+  through about 0.6 alpha; a lake is close to opaque. Waves are 25% taller.
+- **Vegetation edges are softer.** The cutout alpha test rides a stable 4x4 ordered dither
+  instead of a hard threshold, and the threshold creeps up with distance to drop the single
+  texels that pop in and out as the camera moves.
+- **Lighting that wraps.** The sun term has a small wrap, so terminators are soft instead of
+  faceted, and ambient is now a hemisphere: cool skylight from above, warm bounce from the
+  ground. That is most of the reason grass, leaves and mobs read as round.
 
 ## What changed in 0.3.0
 
@@ -49,15 +67,20 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
   hardware box filter), slope scaled bias, normal offset, edge and distance fades, and a
   switch to turn it off.
 - **Sky**: procedural vertical gradient, a sunset band that follows the sun across the
-  horizon, a sun disc and a moon disc drawn in the sky pass, and small scattered cloud puffs
-  from a cluster mask over an FBM field. Vanilla sun, moon and cloud geometry is discarded
-  so nothing is drawn twice.
+  horizon, a sun disc and a moon disc drawn in the sky pass, and clouds: a cluster mask
+  decides where the banks sit, an FBM field cuts them into puffs, and a second sample taken
+  towards the sun shades each puff so it has a lit edge and a grey core. Vanilla sun, moon
+  and cloud geometry is discarded so nothing is drawn twice.
 - **Fog**: exponential height fog whose density drops with altitude, coloured by a
   desaturated air colour with a little warmth on the sun side, so distance stays neutral
   instead of turning blue.
 - **Water**: five swells plus two fine ripples summed into the surface normal, ripples faded
-  out with distance, Schlick Fresnel, a slightly desaturated sky reflection, a sun glint,
-  and red absorption in the body colour.
+  out with distance, Schlick Fresnel, a slightly desaturated sky reflection and a sun glint,
+  over a body that absorbs into a dark teal with depth, so deep water is opaque and shallow
+  water is not.
+- **Lighting**: the sun with a small wrap so terminators are soft, a hemisphere ambient with
+  cool light from above and warm bounce from the ground, and block light for torches and
+  lava.
 - **Post**: exposure, per channel red/green/blue gains, ACES tonemapping, saturation and
   contrast, an underwater tint, FXAA, a soft vignette and a 4x4 ordered dither.
 - **Cutout alpha test** in both the gbuffer and the shadow pass, so leaves and grass look
@@ -65,20 +88,22 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 - **Shader Pack Settings**: three screens (Color, Scene, Quality) with sliders, and two
   presets, `DEFAULT` and `POTATO`.
 
-## What is deliberately not in 0.3.0
+## What is deliberately not in 0.4.0
 
 Not missing by accident - left out on purpose, and listed here so nobody has to guess:
 
 - Screen space terrain reflections in water (the water reflects the sky only).
-- Volumetric or layered clouds. There is one flat procedural sheet.
+- Volumetric clouds. There is one flat sheet; its depth comes from a second density sample,
+  not from marching through a volume.
 - Waving foliage, grass or leaves.
 - Wet surfaces after rain. Rain darkens and flattens the sky, nothing more.
 - PBR: no LabPBR, no POM, no parallax, no specular maps. Vanilla textures only.
 - Dimension specific skies. The horizon is pulled toward vanilla's fog colour, so the
   Nether and the End read plausibly, but there is no bespoke End or Nether sky.
 - Stars, moon phases, coloured shadows, SSAO, bloom, TAA.
-- Water is not told apart from ice or stained glass: every translucent surface uses the
-  same model, so glass ends up looking like a dark mirror.
+- Water is not identified by block id, so every translucent surface shares one model. The
+  depth driven body is limited to horizontal sheets, which keeps vertical glass panes looking
+  like vanilla glass, but a glass roof or floor will read as water.
 - Vanilla's lightmap texture is not sampled; block and sky light levels are read straight
   out of the lightmap coordinate and shaped by curves in `lib/lighting.glsl`. Night vision
   and blindness are therefore not honoured.

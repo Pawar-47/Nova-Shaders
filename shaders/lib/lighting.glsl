@@ -25,16 +25,26 @@ float novaLightLevel(float coordinate) {
 vec3 novaSunlight(NovaSky sky) {
     vec3 warm = mix(vec3(1.00, 0.97, 0.92), vec3(1.00, 0.68, 0.42), sky.sunset * 0.90);
     vec3 colour = mix(vec3(0.34, 0.40, 0.56), warm, sky.day);
-    float strength = mix(0.16, 0.62, sky.day);
+    float strength = mix(0.16, 0.58, sky.day);
     return colour * strength * SUN_STRENGTH;
 }
 
-/* Daylight ambient. 0.66 is picked so a lit surface lands just above 1.0 and a
-   shadowed one around half of that: textures then read as their own colour
-   rather than as their colour multiplied by blue. */
-vec3 novaAmbient(NovaSky sky) {
-    vec3 ambient = mix(vec3(0.030, 0.038, 0.060), vec3(0.64, 0.66, 0.70), sky.day);
-    ambient = mix(ambient, vec3(0.64, 0.52, 0.44), sky.sunset * 0.35);
+/* Hemisphere ambient: cool skylight from above, warm bounce off the ground.
+ *
+ * Taking ambient from the normal instead of a flat colour is what stops a hillside
+ * and its shaded side reading as the same slab, and it is why grass and leaves
+ * have a soft gradient instead of one value. Both ends are kept close to neutral,
+ * so the colour still comes from the texture.
+ */
+vec3 novaAmbient(NovaSky sky, vec3 normal) {
+    vec3 fromSky = vec3(0.60, 0.66, 0.74);
+    vec3 fromGround = vec3(0.56, 0.52, 0.46);
+    float up = normal.y * 0.5 + 0.5;
+
+    vec3 day = mix(fromGround, fromSky, up);
+    vec3 ambient = mix(vec3(0.030, 0.038, 0.060), day, sky.day);
+    ambient = mix(ambient, vec3(0.60, 0.50, 0.42), sky.sunset * 0.30);
+
     return ambient * AMBIENT_STRENGTH;
 }
 
@@ -48,8 +58,13 @@ vec3 novaSurfaceLight(vec3 normal, float NdotL, vec2 lightCoord, float shadow, N
     float skyLevel = novaLightLevel(lightCoord.y);
     float blockLevel = novaLightLevel(lightCoord.x);
 
-    vec3 direct = novaSunlight(sky) * NdotL * shadow;
-    vec3 ambient = novaAmbient(sky) * (skyLevel * skyLevel);
+    // A small wrap term softens the terminator: a real surface does not go from
+    // full sun to full shade across one polygon edge, and this is most of what
+    // makes vegetation and mobs look rounded rather than faceted.
+    float wrapped = clamp((NdotL + 0.18) / 1.18, 0.0, 1.0);
+
+    vec3 direct = novaSunlight(sky) * wrapped * shadow;
+    vec3 ambient = novaAmbient(sky, normal) * (skyLevel * skyLevel);
     vec3 block = novaBlockLight(blockLevel);
 
     // A floor on the light so unlit caves read as dark, not as a black hole.

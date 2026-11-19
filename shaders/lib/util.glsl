@@ -87,4 +87,21 @@ float fbm(vec2 p, int octaves) {
     return sum / max(norm, 1.0e-4);
 }
 
+/* 4x4 ordered dither, in the range -0.5 to 0.5.
+ *
+ * A fixed pattern beats random noise here: it never flickers between frames, it
+ * breaks up banding in a slow sky gradient, and it softens a cutout edge without
+ * costing a texture fetch. */
+const float BAYER_4X4[16] = float[16](
+     0.0,  8.0,  2.0, 10.0,
+    12.0,  4.0, 14.0,  6.0,
+     3.0, 11.0,  1.0,  9.0,
+    15.0,  7.0, 13.0,  5.0
+);
+
+float novaDither(vec2 pixel) {
+    ivec2 cell = ivec2(mod(floor(pixel), vec2(4.0)));
+    return BAYER_4X4[cell.y * 4 + cell.x] / 16.0 - 0.5;
+}
+
 #endif

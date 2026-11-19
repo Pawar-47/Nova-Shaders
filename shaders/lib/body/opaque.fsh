@@ -37,8 +37,14 @@ void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
 
     // Vanilla renders cutout geometry with an alpha test that does not exist on
-    // modern OpenGL, so the discard has to happen here.
-    if (albedo.a < 0.1) discard;
+    // modern OpenGL, so the discard has to happen here. The threshold rides a
+    // stable ordered dither, which turns a staircased cutout edge into a soft
+    // fringe, and it creeps up with distance to drop the single texels that would
+    // otherwise pop in and out as the camera moves. Vegetation is where both of
+    // those show up most.
+    float cutoutNoise = novaDither(gl_FragCoord.xy) * 0.06;
+    float cutoutThreshold = mix(0.10, 0.17, saturate(length(vPlayerPos) / 96.0));
+    if (albedo.a < cutoutThreshold + cutoutNoise) discard;
 #endif
 
     NovaSky sky = novaSkyState();

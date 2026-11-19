@@ -27,7 +27,7 @@ const vec2 WAVE_DIRECTION[5] = vec2[5](
 
 const float WAVE_LENGTH[5] = float[5](13.7, 8.3, 5.1, 3.3, 2.1);
 const float WAVE_SPEED[5] = float[5](0.62, -0.86, 1.13, -1.47, 1.91);
-const float WAVE_SLOPE[5] = float[5](0.085, 0.055, 0.036, 0.022, 0.013);
+const float WAVE_SLOPE[5] = float[5](0.105, 0.068, 0.045, 0.027, 0.016);
 
 vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 #if WATER_WAVES == 0

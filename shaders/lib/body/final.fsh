@@ -61,21 +61,6 @@ vec3 novaAntiAlias(vec2 uv, vec2 texel) {
     return blendB;
 }
 
-/* 4x4 ordered dither. A fixed pattern beats random noise here: it never
-   flickers between frames, and it is exactly what breaks up banding in a slow
-   sky gradient. */
-const float BAYER_4X4[16] = float[16](
-     0.0,  8.0,  2.0, 10.0,
-    12.0,  4.0, 14.0,  6.0,
-     3.0, 11.0,  1.0,  9.0,
-    15.0,  7.0, 13.0,  5.0
-);
-
-float novaDither(vec2 pixel) {
-    ivec2 cell = ivec2(mod(floor(pixel), vec2(4.0)));
-    return BAYER_4X4[cell.y * 4 + cell.x] / 16.0 - 0.5;
-}
-
 void main() {
     vec2 texel = 1.0 / vec2(viewWidth, viewHeight);
     vec2 uv = gl_FragCoord.xy * texel;
