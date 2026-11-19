@@ -91,8 +91,24 @@ plant_species = {
 }
 for tint_mode in ("tinted", "untinted"):
     plant_base = read_json(ROOT / f"assets/nova/models/block/natural_plant_{tint_mode}.json")
-    if plant_base and len(plant_base.get("elements", [])) != 3:
+    if not plant_base:
+        continue
+    elements = plant_base.get("elements", [])
+    if len(elements) != 3:
         fail(f"natural_plant_{tint_mode}.json must contain three crossed plant planes")
+        continue
+    if plant_base.get("ambientocclusion") is not False:
+        fail(f"natural_plant_{tint_mode}.json must disable ambient occlusion on thin crossed planes")
+    for element in elements:
+        faces = element.get("faces", {})
+        if not {"north", "south"}.issubset(faces):
+            fail(f"natural_plant_{tint_mode}.json planes must render on both sides")
+        for face_name in ("north", "south"):
+            face = faces.get(face_name, {})
+            if tint_mode == "tinted" and face.get("tintindex") != 0:
+                fail("tinted plant planes must preserve biome tint index 0")
+            if tint_mode == "untinted" and "tintindex" in face:
+                fail("untinted plant planes must not apply biome tint")
 
 for name, tint_mode in plant_species.items():
     state = read_json(ROOT / f"assets/minecraft/blockstates/{name}.json")
