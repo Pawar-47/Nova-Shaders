@@ -4,7 +4,7 @@ Last updated: 0.10.1 commit (vegetation bending plus audit notes)
 
 ## Project and target
 
-- Minecraft Java 1.21.5, Iris 1.8.x and Sodium on Windows/SK Launcher.
+- Minecraft Java 1.21.5, Iris 1.8.x and Sodium on Linux Mint/SK Launcher.
 - User hardware: Intel Core i3-5005U @ 2.00 GHz and Intel HD Graphics 5500.
 - MIT license. Source adaptations remain limited to the documented Glimmer and Spectrum MIT portions; see `THIRD-PARTY-NOTICES.txt`. No proprietary shader source was used.
 - Shader-only changes cannot alter vanilla tree generation, branch layout or grass-block density.
@@ -30,6 +30,15 @@ Confirmed by reading the sources, not by rendering:
 7. **Textures set the detail ceiling.** The pack ships none; vanilla 16x foliage and stone stay flat regardless of shader work.
 8. **The palette is conservative on purpose.** Ambient is near neutral, fog is restrained, and saturation/exposure default to 1.0.
 
+## What 0.10.2 changes (unverified)
+
+- Cloud field frequency is reduced and the domain is stretched/skewed to favour larger, fewer, irregular masses across the sky; the four-step march and horizon LOD remain in place.
+- Horizontal water alpha has a 0.72 floor, with depth-driven opacity retained.
+- Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
+- The target OS is Linux Mint, not Windows.
+
+No shader compile, in-game visual check or FPS benchmark has been performed for these changes.
+
 ## What 0.10.1 changes (unverified)
 
 - `shaders/lib/body/opaque.vsh` and `shaders/lib/body/shadow.vsh` declare `in vec4 mc_midTexCoord;` and weight the wind offset by `aboveMid`, a tiny smoothstep band around the sprite's own midpoint. The base of a plant stays planted and only the upper part bends; both passes compute the weight identically so the shadow follows.
@@ -46,7 +55,7 @@ Confirmed by reading the sources, not by rendering:
 
 ## Next actions
 
-1. Read the CI result for the 0.10.1 commit. If `Check the shader sources` fails, fix the reported invariant exactly and push again rather than editing VERSION.
+1. Read the CI result for the 0.10.2 commit. If `Check the shader sources` fails, fix the reported invariant exactly and push again rather than editing VERSION.
 2. Get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
 3. If more visual quality is wanted, the honest order is: enable RGBA16F for `colortex0`; raise `CLOUD_STEPS` on anything faster than the HD 5500; then add a compact SSAO in `composite.fsh`. Each needs an in-game comparison before it can be called an improvement.
 4. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.
