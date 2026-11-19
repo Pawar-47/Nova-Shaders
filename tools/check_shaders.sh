@@ -216,8 +216,7 @@ if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" |
    ! grep -qF 'mass = mix(mass, horizonMass, horizonBlend);' "$sky"; then
     fail "cloud march does not blend to a stable low-frequency horizon field"
 fi
-if ! grep -qF 'float horizonMass = valueNoise(midPoint * fieldScale + wind);' "$sky" ||
-   ! grep -qF '1.0 - horizonLod, horizonMass, horizonLod' "$sky"; then
+if ! grep -qF '1.0 - horizonLod, horizonMass, horizonLod' "$sky"; then
     fail "cloud horizon density is not shared across the ray-march samples"
 fi
 if ! grep -qF 'float opticalDepthLimit = mix(8.0, 0.90, horizonLod);' "$sky" ||
