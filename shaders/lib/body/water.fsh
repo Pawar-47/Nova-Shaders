@@ -104,8 +104,8 @@ void main() {
 #ifndef NOVA_HAND
     // The scalar blend approximates the mean of the per-channel transmittance;
     // a floor keeps shallow water tinted rather than clear.
-    float depthAlpha = max(0.62, novaWaterOpacity(thickness));
-    alpha = clamp(mix(max(albedo.a, 0.62), depthAlpha, sheet), 0.0, 0.97);
+    float depthAlpha = max(0.72, novaWaterOpacity(thickness));
+    alpha = clamp(mix(max(albedo.a, 0.72), depthAlpha, sheet), 0.0, 0.97);
     colour = applyFog(colour, vPlayerPos, sky);
 #endif
 
