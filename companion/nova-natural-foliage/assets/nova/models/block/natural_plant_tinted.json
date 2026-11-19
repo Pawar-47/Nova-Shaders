@@ -53,7 +53,7 @@
       ],
       "shade": false,
       "rotation": {
-        "angle": 60,
+        "angle": 67.5,
         "axis": "y",
         "origin": [
           8,
@@ -97,7 +97,7 @@
       ],
       "shade": false,
       "rotation": {
-        "angle": -60,
+        "angle": -67.5,
         "axis": "y",
         "origin": [
           8,
