@@ -125,7 +125,7 @@ if [ -f "$block_props" ]; then
             fail "shaders/block.properties: vegetation mapping is missing %minecraft:$tag"
         fi
     done
-    if ! grep -qE '^[[:space:]]*block\\.103[[:space:]]*=[[:space:]]*%minecraft:leaves([[:space:]]|$)' "$block_props"; then
+    if ! grep -qE '^[[:space:]]*block\.103[[:space:]]*=[[:space:]]*%minecraft:leaves([[:space:]]|$)' "$block_props"; then
         fail "shaders/block.properties: leaf block ID 103 must map %minecraft:leaves"
     fi
     for leaf in minecraft:oak_leaves minecraft:spruce_leaves minecraft:birch_leaves minecraft:jungle_leaves minecraft:acacia_leaves minecraft:dark_oak_leaves minecraft:mangrove_leaves minecraft:cherry_leaves minecraft:azalea_leaves minecraft:flowering_azalea_leaves minecraft:pale_oak_leaves; do
