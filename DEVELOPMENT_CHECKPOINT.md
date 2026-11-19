@@ -1,69 +1,65 @@
 # Nova Shaders Development Checkpoint
 
-Last updated: v0.10.3 published (1.21.5 foliage-model compatibility fix; visual verification pending)
+Last updated: 2026-11-20 — shader-only direction confirmed; companion resource pack removed from active project.
 
 ## Project and target
 
-- Minecraft Java 1.21.5, Iris 1.8.x and Sodium on Linux Mint/SK Launcher.
-- User hardware: Intel Core i3-5005U @ 2.00 GHz and Intel HD Graphics 5500.
-- MIT license. Source adaptations remain limited to the documented Glimmer and Spectrum MIT portions; see `THIRD-PARTY-NOTICES.txt`. No proprietary shader source was used.
-- Shader-only changes cannot alter vanilla tree generation, branch layout or grass-block density.
-- This environment has no Minecraft/Iris runtime, GLSL compiler, shell or shaderpack build tool. Static review and CI are the only checks. Do not use the web inspector.
+- Repository: https://github.com/Pawar-47/Nova-Shaders
+- Minecraft Java 1.21.5, Iris 1.8.x and Sodium on Linux Mint / SK Launcher.
+- Target hardware: Intel Core i3-5005U @ 2.00 GHz, Intel HD Graphics 5500, 8 GB RAM.
+- MIT project license. Existing MIT adaptations from Glimmer and Spectrum are documented in THIRD-PARTY-NOTICES.txt.
+- **One shader pack only.** No companion resource pack, model override pack, separate foliage ZIP or dependency on another pack. All improvements must be implemented inside the shader pack.
+- Shader limitations must be respected: GLSL can shade and animate existing vertices but cannot add leaf planes, change vanilla models, alter tree generation/branching or change biome vegetation density.
 
-## Repository state
+## Repository baseline and release state
 
-- Repository: `https://github.com/Pawar-47/Nova-Shaders.git`.
-- Pull request #1 (`natural-visuals-0.10.2`) was merged by the repository owner. Release `v0.10.2` remains published; its shader ZIP is usable, but its foliage companion has been superseded because of the plant-angle compatibility issue below. Release `v0.10.3` is now published with corrected shader and foliage ZIP assets.
-- A post-release audit found that the v0.10.2 companion plant models used ±60° rotations, unsupported by the Minecraft 1.21.5 block-model format. The models are corrected to ±67.5°, and `tools/check_foliage_pack.py` rejects any plant rotation that is not a multiple of 22.5°. Use the v0.10.3 foliage companion on Minecraft 1.21.5.
-- GitHub Actions run `44617274998` passed on main commit `436c2e5`: shader checks, foliage JSON/reference checks, both ZIP builds, both artifact uploads and publication of release `v0.10.3` all succeeded.
-- The v0.10.2 research and license review is recorded in `VISUAL-RESEARCH.md`. No third-party shader or resource-pack model files were copied; Glimmer and Spectrum remain the only shader source adaptations. The Edgy Foliage grass-edge approach is attributed in the companion notices.
-- Added `companion/nova-natural-foliage/`, an original optional MIT resource pack: one randomized angled plane per vanilla leaf block; three crossed planes for short grass, fern, seagrass, dead bush, bush, short/tall dry grass and Nether sprouts; and a grass-block side fringe. Tall grass and large fern remain vanilla. Snow-covered grass keeps the vanilla `grass_block_snow` model. The pack is built as a separate ZIP and validated by `tools/check_foliage_pack.py`. Geometry cost and compatibility are not yet benchmarked.
+- Main baseline inspected: `436c2e5d66622dac417092f00cb61dec13096d83`.
+- Published releases v0.10.2 and v0.10.3 both historically contain a shader ZIP and a companion foliage ZIP. Those published assets have not been rewritten; they are not part of the current product direction.
+- Main currently points to v0.10.3. The `shader-only-research` branch removes the companion source and validator, and changes CI/package/release output to a single shader ZIP.
+- `VERSION` is now 0.10.4 so the next release will use a new tag rather than colliding with the already-published v0.10.3. Future releases must contain only `nova-shaders-<version>-shaderpack.zip`.
+- No changes should be merged or released until branch CI passes and the source-only archive is verified.
+
+## Current shader implementation (source-level, not visually verified)
+
+- Compact forward pipeline, one shadow map, small cloud ray march and two full-screen passes.
+- Default shadow map 512px / 64 blocks; PERFORMANCE disables the shadow pass and FXAA.
+- Water: shared analytic wave height/slope; depth-derived Beer–Lambert absorption and in-scattering; horizontal opacity floor 0.82; sky reflection and restrained glint. High-frequency gradient noise is skipped beyond 72 blocks while analytic waves remain.
+- Foliage: biome-preserving warm/cool variation and sunset-aware backlighting. Ground plants use a `mc_midTexCoord` sprite-midpoint hinge; leaf blocks use separate material ID 103 and a continuous world-space wind field with slow canopy sway, tiny per-vertex flutter and a 96-block distance fade. Terrain and shadow passes use the same leaf displacement.
+- Clouds: asymmetric skewed field, near-view scales 0.014 / detail 0.050 fading to broad horizon LOD; four samples by default and no extra march samples added. The detail-noise lookup is skipped once the horizon LOD fades it out.
+- No SSAO, bloom, SSR or multi-ray volumetric lighting in the default path.
+
+## Research reviewed on 2026-11-20
+
+- Modrinth: Spudlight (MIT / fork attribution), LIGHT (Chocapic13 rules), Googy (CC BY 4.0), UltraLight (ARR; reference only), RMC (Apache-2.0).
+- GitHub: Iris shader template and documentation, At87668/LIGHT-Shaders (Chocapic13 sharing rules; inspected, no source copied), MakeUp Ultra Fast (LGPL-3.0), Glimmer (MIT), Spectrum (MIT), opengl_sky (MIT).
+- Research and licensing decisions are recorded in VISUAL-RESEARCH.md. Do not copy code from ARR, NC, ND, or unclear-license projects. Verify exact source provenance and obligations before any adaptation.
+
+## Active review and verification status
+
+- PR #2: https://github.com/Pawar-47/Nova-Shaders/pull/2 — shader-only cleanup, per-leaf vertex wind and water distance gating. Working branch: `shader-only-research`.
+- Next release version prepared: v0.10.4. The v0.10.2 and v0.10.3 release pages still retain their historical companion ZIP assets.
+- The PR head is the authoritative current revision; use the head SHA shown on PR #2 rather than a copied SHA in this note. It includes the latest main checkpoint as a merge parent.
+- The PR currently has no reported status checks / Actions run. The repository connector did not trigger the PR workflow, and a local clone attempt could not resolve github.com, so the changed checker and packaging script have not been executed in this environment.
+- Existing static shader checks and archive packaging have passed in previous runs.
+- No GLSL driver compilation, Iris 1.8.x in-game render validation, target-machine screenshots or FPS benchmark has been performed. Do not merge or release this branch until its source checks and packaging have actually run.
+- A passing static CI job is not proof of shader compilation, visual quality or performance.
+- Do not claim that water/cloud/foliage visuals are complete until they have been inspected in-game.
+
+## Next implementation order
+
+1. Validate the new leaf material ID 103 tag/fallback mapping on Iris 1.8.x; inspect for edge cracks, cube shearing and shadow mismatch. Tune the per-vertex wind amplitude and distance fade only after in-game comparison.
+2. Review water wave detail and depth response; keep high-frequency work close to camera and preserve the user's tinted, not glass-clear, water target.
+3. Improve broad asymmetric cloud distribution within the current fixed sample budget.
+4. Add reproducible Iris-compatible shader preprocessing / GLSL validation to CI if technically sound.
+5. Keep packaging and releases to the single shader ZIP.
+6. Update this checkpoint after each durable commit, including branch, commit SHA, CI run and explicit unverified items.
 
 
-## Audit: why the pack still reads as basic
+## Validation update — 2026-11-20
 
-Confirmed by reading the sources, not by rendering:
-
-1. **Cloud sampling, not cloud code, is the limit.** `CLOUD_STEPS` is 4 by default and 3 in POTATO, spread over a slab whose far limit is 6000 blocks. At a low view elevation the four samples are 150-1500 blocks apart, so the field is undersampled by construction. The 0.10.0 horizon LOD blends the samples to one shared broad mass and bounds optical depth, which removes grain but also flattens the band. Detail above roughly six degrees of elevation is still carried by four samples.
-2. **Shadow quality is a budget decision.** One 512/1024 map over 48/96 blocks with four half-texel taps: hard edges, no penumbra variation, no colored shadows. `shadowtex1` is never sampled, so translucent geometry is not excluded.
-3. **No screen-space stage exists.** There is no SSAO, no SSR, no volumetric light and no bloom. `composite.fsh` and `final.fsh` are the only full-screen passes, and water reflects `novaSkyGradient` only, so terrain is never reflected.
-4. **Highlight headroom is off.** The `colortex0Format = RGBA16F` directive in `lib/body/composite.fsh` is commented out, so `colortex0` is 8-bit: the sun disc (peaks near 4.5) and unlit geometry (`EMISSIVE_GAIN` 2.2) clip at 1.0 before the tonemapper.
-5. **Shading runs in display space.** Gbuffers multiply sRGB-encoded texture values by light and the composite decodes once at the end. This is cheap and deliberate, but it compresses midtone contrast and dulls the terminator compared with a linear pipeline.
-6. **Vegetation sway was translating whole quads.** Until this round `novaVegetationOffset` was applied to every vertex of a plant, so a tuft moved sideways as a rigid card instead of bending. Fixed below.
-7. **Textures set the detail ceiling.** The pack ships none; vanilla 16x foliage and stone stay flat regardless of shader work.
-8. **The palette is conservative on purpose.** Ambient is near neutral, fog is restrained, and saturation/exposure default to 1.0.
-
-## What 0.10.2 changes (unverified)
-
-- Cloud field uses a balanced near-view sampling scale (0.014) with a restrained detail scale (0.050) in the same skewed domain; both fade to broader fields near the horizon. This changes only the coordinates of existing noise lookups and adds no ray-march samples. The target is roughly 15–20 broad, asymmetric masses in a typical overhead open-sky view; exact count varies with view and coverage. The four-step march remains in place.
-- Horizontal water alpha has a 0.82 floor, with depth-driven opacity retained.
-- Foliage shading now adds low-amplitude warm/cool patch variation and sunset-aware backlighting while retaining the original biome tint. Grass-block tops receive variation without vertex displacement. Vertical faces preserve their texture alpha rather than inheriting the horizontal-sheet opacity floor.
-- Default shadow quality is now 512px over 64 blocks for the HD 5500 target; 1024 remains selectable.
-- Added a `PERFORMANCE` preset that sets `SHADOWS=0`, disables Iris's actual shadow render pass through conditional `shadow.enabled`, disables FXAA and keeps three cloud samples plus water effects. The shader checker asserts this path.
-- The target OS is Linux Mint, not Windows.
-
-No shader compile, in-game visual check or FPS benchmark has been performed for these changes. The denser overhead cloud field and 0.82 water floor are source changes only; compare the actual cloud count/distribution and shallow/deep water in-game before calling them visually complete.
-
-## What 0.10.1 changes (unverified)
-
-- `shaders/lib/body/opaque.vsh` and `shaders/lib/body/shadow.vsh` declare `in vec4 mc_midTexCoord;` and weight the wind offset by `aboveMid`, a tiny smoothstep band around the sprite's own midpoint. The base of a plant stays planted and only the upper part bends; both passes compute the weight identically so the shadow follows.
-- `shaders/lib/vegetation.glsl` raises the lateral amplitude to `vec2(0.24, 0.14)` now that only the top of a plant moves, and documents the midpoint weighting.
-- `shaders/block.properties` adds an explicit `#else` fallback list of 1.21.5 leaf, plant, flower, sapling and crop blocks, so vegetation selection cannot silently fail on a loader without tag support. Grass blocks stay on ID 102 (top-face tint only, no geometry shear).
-- `tools/check_shaders.sh` checks `mc_midTexCoord` in both passes, the shared `aboveMid` weight, and the explicit leaf fallback list.
-- `README.md` gains a "Why it still looks simpler than large packs" section stating the limits above; the vegetation bullet now describes base-anchored bending.
-
-## Verification status
-
-- GitHub Actions run `44617274998` passed on main commit `436c2e5`: shader source checks, optional foliage JSON/reference checks (including selected plant geometry, tint-index rules, snowy grass fallback and valid 22.5-degree rotation increments), packaging of both ZIPs, upload of both artifacts and release publication all succeeded. Release assets are `nova-shaders-0.10.3-shaderpack.zip` and `nova-natural-foliage-0.10.3.zip`.
-- This is static validation and archive packaging only. The shaders have not been compiled by a GLSL driver, loaded in Iris, rendered in Minecraft, or benchmarked on the Intel HD 5500.
-- The balanced overhead cloud field (0.014 near-view scale and 0.050 detail scale), matching source-check assertion, cutout-mipped leaf render-layer check, horizontal-only water opacity floor, `PERFORMANCE` preset, and optional leaf/plant models plus the snowy grass-state fallback are included in this passing run.
-- `PERFORMANCE` sets `SHADOWS=0`; Iris's conditional `shadow.enabled = false` disables the shadow render pass itself, not just fragment shadow sampling. FXAA is also disabled; clouds and water remain enabled.
-- The previous commits' visual behaviour is also unverified: no screenshot comparison exists for 0.9.0 or 0.10.0.
-- `mc_midTexCoord` is bound by Iris at attribute location 12 (`ProgramCreator`), and the terrain and shadow vertex formats both carry it, so the attribute itself is expected to resolve.
-
-## Next actions
-
-1. Install the corrected v0.10.3 shader and foliage ZIPs on Linux Mint once the patch release is published and capture matched screenshots on the target machine: a close plant (bend and shadow alignment), leaf blocks/canopies, a grass field, shallow and deep water, overhead clouds, and the horizon.
-2. Test the optional `Nova Natural Foliage Lite` ZIP with vanilla and common texture packs; benchmark forest/grassland FPS before recommending it. It adds one extra plane per leaf block and a third plane to selected small plants, increasing overdraw.
-3. After screenshots and FPS are available, tune cloud density/coverage and water alpha against those observations rather than guessing from source math.
-4. Do not claim visual success until the shader has been loaded in Iris on the target Linux Mint machine. Tree structure and biome grass density remain outside GLSL; they require resource-pack models or world-generation changes.
+- GitHub Actions run `44618555950` completed successfully on the PR head `552f2191ce25fd1aa0df8b6a51d6b19718b0ac98`.
+- Job `Check, package and release`: VERSION validation, shader static checks, single shader ZIP packaging and artifact upload all passed. Release publication was correctly skipped because this was a pull-request run.
+- The run produced the shader-only artifact; no companion archive is built or uploaded by this workflow.
+- This supersedes the earlier note saying no PR workflow run was reported. The combined commit-status endpoint returned no separate status entries, but the workflow-run endpoint confirms the completed successful run.
+- Scope of this verification remains static source validation and ZIP packaging. It does not compile GLSL with a GPU driver, launch Minecraft/Iris, verify rendered appearance, or benchmark Intel HD 5500 performance.
+- PR #2 remains open pending review of the passing source changes and the remaining runtime-only validation. Do not mark the shader visually or performance complete without the target-machine test.

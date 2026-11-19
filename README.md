@@ -9,20 +9,24 @@ march and two full-screen passes. It has not been benchmarked on this hardware, 
 performance guarantee is claimed; start with DEFAULT for balanced visuals, POTATO for a lighter
 cloud/shadow workload, or PERFORMANCE when FPS matters more than dynamic shadows and FXAA.
 
-Version **0.10.3**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.10.4** (next shader-only release). MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
 
-An optional **Nova Natural Foliage Lite** companion resource pack is built separately
-from the shader ZIP. It adds a single randomized angled leaf plane to vanilla leaf
-blocks, three-plane small grass/shrub models and a small grass-block side fringe to soften cube-shaped canopies and turf edges.
-It is experimental, adds geometry/overdraw, and should only be enabled if forest-scene
-FPS remains acceptable. It does not alter tree generation, branch placement, tall-grass/large-fern models or biome vegetation density.
+From **v0.10.4 onward**, Nova will be distributed as one shader pack only. The published v0.10.2 and v0.10.3 releases retain their historical companion ZIPs, but no companion source, validation or packaging remains in this development branch. All future visual work—including water, sky, clouds, foliage shading and vegetation animation—must be implemented inside the shader pack. Shader code can animate and shade vanilla geometry, but it cannot replace block models or change tree generation.
 
-## What changed in 0.10.3
+## What changes in 0.10.4
 
-- **Minecraft 1.21.5 foliage compatibility fix.** The three-plane plant models now use rotation angles that are multiples of 22.5 degrees, as required by the 1.21.5 model format. The foliage validator now rejects unsupported angles so the issue cannot silently return.
+- Future CI builds and releases contain only the Iris shader ZIP; companion source, validation and packaging have been removed.
+- Leaf blocks now receive low-amplitude continuous vertex wind with slow canopy sway, subtle per-vertex flutter, distance fade and matching shadow deformation.
+- Ground plants retain their own sprite-midpoint hinge so leaf blocks and small plants no longer share one deformation rule.
+- High-frequency water gradient-noise ripples are skipped beyond 72 blocks while the analytic wave slope remains active.
+- Leaves now have a separate shader material ID and a low-amplitude, continuous world-space vertex wind field. A slow canopy sway is layered with tiny per-vertex flutter; motion fades with distance and the same displacement is applied in the shadow pass.
+- Ground plants retain their sprite-midpoint hinge, separate from leaf-block motion. This is shader-only and does not add geometry or change vanilla models.
+- High-frequency water ripple noise is now skipped entirely beyond its 72-block detail range; the cheaper analytic wave slope remains.
+- The cloud detail-noise lookup is skipped when the horizon LOD has faded its contribution to zero.
+- Continued focus is on lightweight water and cloud improvements. Vanilla block geometry and world generation remain outside the shader's control.
 
-The previous v0.10.2 shader and foliage improvements are retained. This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
+This patch does not claim visual or FPS validation; the target-hardware test plan remains the next verification step.
 
 ## What changed in 0.10.2
 
@@ -31,7 +35,7 @@ The previous v0.10.2 shader and foliage improvements are retained. This patch do
 - **Foliage shading is less uniform.** Leaves and plants receive restrained warm/cool patch variation and a sunset-aware backlight while the original biome tint remains dominant. Grass-block top faces receive the same variation without moving the block geometry.
 - **Target defaults are lighter.** The default shadow map is reduced from 1024 to 512 and shadow distance from 96 to 64 blocks for the Intel HD 5500 target. The 1024 option remains available for sharper shadows. A new PERFORMANCE preset disables the actual Iris shadow render pass and FXAA, while keeping clouds and water enabled.
 
-These are source-level adjustments. Cloud count, water appearance and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit, and [TARGET-TEST-PLAN.md](TARGET-TEST-PLAN.md) for the repeatable HD 5500 visual/FPS comparison procedure.
+These are source-level adjustments. Cloud count, water appearance, leaf motion and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit, and [TARGET-TEST-PLAN.md](TARGET-TEST-PLAN.md) for the repeatable HD 5500 visual/FPS comparison procedure.
 
 ## What changed in 0.10.1
 

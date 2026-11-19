@@ -22,15 +22,18 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 
     vec2 p = worldPos.xz;
     float time = frameTimeCounter;
-    float viewDistance = length(worldPos - cameraPosition);
+    vec3 cameraRelative = worldPos - cameraPosition;
+    float distanceSquared = dot(cameraRelative, cameraRelative);
 
     // The shared analytic slope matches the higher-frequency vertex displacement.
-    // A short-scale noise ripple adds moving detail between Minecraft's sparse vertices.
-    float fineFade = 1.0 - saturate(viewDistance / 72.0);
-    vec3 chop = valueNoiseGradient(p * 0.42 + vec2(time * 0.18, -time * 0.14));
-
+    // The extra noise ripple is only useful nearby, so skip its gradient-noise
+    // evaluation entirely once the distance fade reaches zero.
     vec2 slope = novaWaterSurfaceSlope(p) * 1.8;
-    slope += chop.yz * 0.055 * fineFade;
+    if (distanceSquared < 72.0 * 72.0) {
+        float fineFade = 1.0 - sqrt(distanceSquared) / 72.0;
+        vec3 chop = valueNoiseGradient(p * 0.42 + vec2(time * 0.18, -time * 0.14));
+        slope += chop.yz * 0.055 * fineFade;
+    }
     slope *= 1.0 + saturate(rainStrength) * 0.25;
 
     // Rain roughens the surface slightly. The normal's vertical axis is Y.

@@ -33,10 +33,7 @@ jobs:
       - name: Check the shader sources
         run: bash tools/check_shaders.sh
 
-      - name: Check the optional foliage resource pack
-        run: python3 tools/check_foliage_pack.py
-
-      - name: Package the shader and companion packs
+      - name: Package the shader pack
         run: bash tools/package.sh
 
       - name: Upload the shader pack
@@ -44,13 +41,6 @@ jobs:
         with:
           name: nova-shaders-${{ steps.version.outputs.value }}
           path: build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip
-          if-no-files-found: error
-
-      - name: Upload the optional foliage resource pack
-        uses: actions/upload-artifact@v4
-        with:
-          name: nova-natural-foliage-${{ steps.version.outputs.value }}
-          path: build/nova-natural-foliage-${{ steps.version.outputs.value }}.zip
           if-no-files-found: error
 
       - name: Publish release v${{ steps.version.outputs.value }}
@@ -73,7 +63,7 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.10.3
+          ## Nova Shaders 0.10.4
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
           The target is an Intel Core i3-5005U with Intel HD Graphics 5500 on Linux Mint, but appearance and
@@ -82,20 +72,16 @@ jobs:
 
           ### Highlights
 
-          - Fixes the optional foliage companion's three-plane plant models for Minecraft 1.21.5: rotations now use supported 22.5-degree increments, and CI rejects unsupported model angles.
-          - A separate optional Nova Natural Foliage Lite resource pack adds one randomized leaf-textured plane per vanilla leaf block and a grass-block side fringe to soften square silhouettes. It is packaged separately from the shader ZIP and is not enabled automatically.
           - Cloud sampling uses a denser near-view field to separate overhead cloud islands, then fades to a broader field near the horizon; the target is roughly 15–20 asymmetric masses across a typical overhead open-sky view. The detail field follows the same skewed domain without adding ray-march samples.
           - Horizontal water retains at least 82% opacity and increases opacity with depth, avoiding a clear-glass appearance.
           - The default shadow map is 512px over 64 blocks for the Intel HD 5500 target; 1024px remains available.
           - The PERFORMANCE preset disables the actual Iris shadow render pass and FXAA while keeping clouds and water enabled.
-          - The optional foliage pack also gives selected grasses, ferns, bushes and dry plants three crossed planes for fuller silhouettes; tall grass and large fern remain vanilla.
           - Foliage shading adds subtle warm/cool variation and sunset-aware backlighting while preserving biome tint.
-          - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
-            plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
-            bends the cast shadow by the identical weight.
-          - block.properties keeps the Iris tag form and adds an explicit 1.21.5 leaf, plant,
-            flower, sapling and crop fallback list, so the vegetation block ID cannot silently go
-            unassigned on a loader without tag support.
+          - Ground plants use a sprite-midpoint hinge; leaf blocks use a separate low-amplitude,
+            continuous world-space vertex wind field with slow canopy sway and subtle per-vertex
+            flutter. The motion fades with distance and is matched in the shadow pass.
+          - block.properties assigns separate Iris material IDs to leaves, ground plants and
+            grass blocks, with explicit 1.21.5 fallback mappings when tag support is unavailable.
           - Block ID 102 keeps grass blocks on top-face colour variation only; full cubes are not
             sheared by the wind.
           - The README now records this pipeline's ceilings - four cloud samples over a long slab,
@@ -117,6 +103,5 @@ jobs:
 
           gh release create "$tag" \
             "build/nova-shaders-${{ steps.version.outputs.value }}-shaderpack.zip" \
-            "build/nova-natural-foliage-${{ steps.version.outputs.value }}.zip" \
             --title "Nova Shaders $tag" \
             --notes-file "$notes"

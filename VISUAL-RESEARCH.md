@@ -1,63 +1,64 @@
-# Nova Shaders — Visual and Reuse Research
+# Nova Shaders — Shader Research and Implementation Notes
 
 Research snapshot: 2026-11-20  
 Target: Minecraft Java 1.21.5, Iris 1.8.x + Sodium, Linux Mint, Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM.
 
-## Design target
+## Non-negotiable project scope
 
-Nova should keep Minecraft's readable vanilla identity while removing the flat, glassy and overly geometric feel:
+Nova is a **single shader pack**. Do not create, package, recommend as part of the project, or depend on companion resource packs. All supported improvements must be implemented in GLSL within the shader pack.
 
-- Water should read as a coloured, translucent body. Shallow bottoms remain visible through tint and distortion; deep water should not look like clear glass.
-- Clouds should be a small set of broad, irregular, asymmetric masses spread across the full sky, including overhead views, rather than a narrow horizon bank.
-- Foliage should gain natural colour variation, soft backlighting and wind motion without expensive per-pixel effects.
-- Grass, shrubs and tree canopies should look less like isolated flat cards or cubes. The shader can shade and animate existing geometry, but cannot change vanilla tree branching, block models or biome density. That requires a resource pack or world-generation layer.
-- The default configuration must be chosen for the HD 5500 first. Expensive effects remain optional.
+Shader limits remain explicit: GLSL can shade, tint, animate and slightly deform existing vertices. It cannot add leaf planes, change vanilla block models, generate branches, alter tree structure or increase biome plant density. Do not promise geometry changes the shader pipeline cannot make.
 
-## Repositories reviewed
+## Visual goals
 
-### Strong candidates for an optional foliage companion pack
+- Water: tinted/translucent body, subdued shallow bottom, stronger depth absorption, restrained reflections and subtle surface motion.
+- Foliage: preserve biome tint; add restrained variation, backlighting and natural, non-synchronous motion using existing vertices only. Leaves and ground plants must use separate motion paths because their vanilla vertex topology differs.
+- Clouds: broad, asymmetric masses across overhead and horizon views, without a costly volumetric march.
+- Performance: target Intel HD Graphics 5500 first. Avoid making SSR, SSAO, bloom, TAA or multi-ray volumetrics default requirements.
 
-| Repository | License / status | Relevant contribution | Decision |
+## Modrinth shader research
+
+| Reference | License / status | Useful implementation lessons | Reuse decision |
 |---|---|---|---|
-| [thimblebird/edgy-foliage](https://github.com/thimblebird/edgy-foliage) | MIT | Custom block models and block states; includes grass-block, leaf, cactus and sugar-cane model work. It uses existing Minecraft textures rather than shipping replacement textures. | Best source to study/adapt for less-boxy grass and plant silhouettes. Its 1.21 branch and Respackopts integration need validation against 1.21.5 before shipping. |
-| [TeamMidnightDust/BetterLeavesLite](https://github.com/TeamMidnightDust/BetterLeavesLite) | MIT | Optimized leaf models with fewer model elements; round foliage texture is pre-generated into one texture rather than adding multiple texture references. | Strong low-overhead option for fuller tree canopies. Its documented downside is reduced compatibility with other packs that replace leaf textures. Test as a separate optional pack before combining it with Edgy Foliage. |
-| [PoeticRainbow/rainbows-foliage](https://github.com/PoeticRainbow/rainbows-foliage) | No repository license file found in this review | Adds detail and variation to foliage; vanilla edition changes leaves, while the PolyTone edition covers more plants. README describes low/no extra geometry for the leaf treatment. | Visual reference only. Do not copy or redistribute until the author provides a clear license. |
+| [Spudlight Shaders](https://modrinth.com/shader/spudlight-shaders) | MIT; fork of Mellow with upstream permission noted | Explicit low-end budget: 512px shadows, 64-block range, vertex-stage foliage/water animation, and no SSAO, bloom, SSR or volumetric clouds in its low-end profile. | Study the public source and preserve upstream attribution if any code is adapted. Do not assume its forked code is wholly original to Spudlight. |
+| [LIGHT Shaders](https://modrinth.com/shader/light-shaders) | Chocapic13 sharing/modification rules | Shows how removing expensive features can retain water reflections/ripples, dynamic-weather response and moving clouds. | Follow the linked Chocapic13 rules; do not copy until the exact permitted reuse and required notices are checked. |
+| [Googy Shaders](https://modrinth.com/mod/googy-shaders) | CC BY 4.0; older Minecraft versions | Per-vertex noise gives different parts of foliage different phases, avoiding one rigid synchronized sway. | Algorithm reference only. Nova's new leaf wind is an independent implementation; no Googy source was copied. |
+| [UltraLight Shaders](https://modrinth.com/shader/ultralightshader) | ARR; do not copy source | Useful design notes: every effect has a cheap path, depth-faded water opacity, distance falloff for water detail, and a clear performance cut order. | Design reference only; all-rights-reserved source is not reusable. |
+| [RMC Shaders](https://modrinth.com/shader/rmc-shaders) | Apache-2.0 | A compact GLSL 120 compatibility strategy, procedural clouds and simple wave/reflection features. | Potential code reference after checking exact source files and compatibility; preserve Apache notices if adapted. |
 
-These resource packs should remain optional and separate from the shader ZIP. Combining both MIT candidates blindly could create conflicting leaf model/blockstate overrides, so choose a single leaf implementation and merge only non-conflicting plant/grass models after inspecting their generated output.
+## GitHub and Iris references
 
-### Shader packs and rendering references
+- [Iris shaderpack template](https://github.com/ascpixi/minecraft-shader-template): use as a minimal project-layout and entry-point reference.
+- [Iris shader documentation](https://github.com/IrisShaders/docs): authoritative reference for shader stages, uniforms, attributes, program naming and pack compatibility. Iris documents `mc_Entity` as the block ID from `block.properties`; `mc_midTexCoord` is a `vec2` containing the current quad's texture midpoint and is valid in terrain and shadow vertex programs. See [mc_Entity](https://github.com/IrisShaders/docs/blob/26.1/src/content/docs/current/Reference/Attributes/mc_Entity.mdx) and [mc_midTexCoord](https://shaders.properties/current/reference/attributes/mc_midtexcoord/).
+- [At87668/LIGHT-Shaders](https://github.com/At87668/LIGHT-Shaders): source inspected. Its LICENSE explicitly requires Chocapic13's sharing/modification rules, so no code was copied. Its two-stage vertex wind illustrates how slow canopy motion and faster local movement can be layered; Nova's current leaf field is an independent, lower-amplitude implementation with a distance fade and matched shadow deformation.
+- [MakeUp Ultra Fast](https://github.com/javiergcim/MakeUpUltraFast): LGPL-3.0; useful architecture and low-end feature budgeting, but any source adaptation must comply with LGPL.
+- [Glimmer](https://github.com/jbritain/glimmer-shaders): MIT; already used for Nova's compact directional water-wave slope and Beer–Lambert water attenuation.
+- [Spectrum](https://github.com/zombye/spectrum): MIT; already used for Nova's height-profiled cloud density and compact anisotropic phase term. Its heavy 3D textures and multi-ray march are not ported.
+- [opengl_sky](https://github.com/shff/opengl_sky): MIT; standalone procedural sky reference, not a drop-in Iris shader.
 
-| Repository / source | License / status | Useful ideas | Decision |
-|---|---|---|---|
-| [javiergcim/MakeUpUltraFast](https://github.com/javiergcim/MakeUpUltraFast) | LGPL-3.0 | Lightweight shader design, feature toggles and low-end quality trade-offs. | Good reference. No code copied in this change; any future adaptation must preserve LGPL obligations. |
-| [AlexanderNyr/AuraLite-Shaders](https://github.com/AlexanderNyr/AuraLite-Shaders) | CC BY-NC-SA 4.0 | Modern water, foliage translucency, clouds and HDR ideas. | Do not adopt source into Nova's MIT codebase: non-commercial/share-alike terms are incompatible with the project's permissive reuse goal. |
-| [sixthsurge/photon](https://github.com/sixthsurge/photon) | Custom restrictive license | Detailed water, reflections, clouds and atmosphere to study. | Reference only. Its license restricts redistribution of derivative shader packs on creator-compensation platforms without written permission. |
-| [RustingStudio/RustingShader](https://github.com/RustingStudio/RustingShader) | No clear LICENSE file found | Deferred water, caustics, soft shadows and volumetric clouds. | Reference only until licensing is clarified; several effects are too costly for the target GPU as a default. |
-| [shff/opengl_sky](https://github.com/shff/opengl_sky) | MIT | Procedural sky/cloud rendering in a small standalone OpenGL project. | Algorithm reference only; it is not an Iris shader pack and has not been ported. |
-| [SpudLight Shaders](https://modrinth.com/shader/spudlight-shaders) | Source/license not verified in this review | Lightweight shadows, waving leaves and water; described as tuned for low-end GPUs. | Useful visual/performance reference, but no verified source repository was located for code reuse. |
+## Current Nova implementation
 
-### Existing MIT adaptations already in Nova
+- One compact forward pipeline, one shadow map, a small cloud ray march and two full-screen passes.
+- Default shadow map 512px over 64 blocks; PERFORMANCE disables the shadow pass and FXAA.
+- Water uses shared analytic vertex displacement and fragment slope, depth-derived Beer–Lambert tint, and a minimum horizontal blend opacity. Its high-frequency gradient-noise ripple is evaluated only within 72 blocks; the analytic wave slope remains active farther away.
+- Ground plants use a sprite-midpoint hinge; leaf blocks use a separate ID and a continuous world-space vertex field with slow canopy sway plus tiny per-vertex flutter. The leaf field fades out by 96 blocks and is shared exactly with the shadow pass. Both paths preserve vanilla geometry and add no vertices.
+- Clouds use four samples by default (three in the lightest profile), a height-shaped density field and a broad horizon LOD. The separate detail-noise lookup is skipped when the horizon LOD fades its contribution to zero.
+- No SSAO, bloom, screen-space reflections or multi-ray volumetrics are required by default.
 
-- [jbritain/glimmer-shaders](https://github.com/jbritain/glimmer-shaders): MIT. Nova already adapts a compact directional wave profile/analytic slope and Beer–Lambert water attenuation/in-scattering.
-- [zombye/spectrum](https://github.com/zombye/spectrum): MIT. Nova already adapts the height-profiled cloud-density approach and compact anisotropic phase term. Spectrum's 3D noise textures, compute passes and multi-ray march are not included.
+## Engineering rules
 
-The exact notices and copied portions are recorded in `THIRD-PARTY-NOTICES.txt`. No new third-party shader source was copied for v0.10.2.
-
-### Other foliage references excluded from reuse
-
-- [LambdAurora/LambdaBetterGrass](https://github.com/LambdAurora/LambdaBetterGrass): its custom Lambda License is not a standard permissive FOSS license and requires written approval for binary distribution. Study only unless permission is obtained.
-- [NaiNonTH/Foliage-Plus](https://github.com/NaiNonTH/Foliage-Plus): archived repository, no clear root license found in this review, and the project points to separate terms of use. Do not copy its assets/models without permission.
-
-## Hardware and compatibility notes
-
-- The target is Intel HD Graphics 5500 (Broadwell / Gen8) under Linux Mint, so Mesa/OpenGL driver behaviour must be validated on the actual machine.
-- Iris documentation lists Mesa Intel on Linux as supported with some issues; shader-pack compatibility still depends on the exact Minecraft, Iris, Sodium and Mesa versions.
-- The project currently has static source checks and ZIP packaging in CI. A green CI run proves those checks and packaging passed; it does not prove shader compilation, correct rendering, or FPS.
-- No FPS target should be claimed until measured on the target machine using the same world, render distance, resolution, Minecraft version and Iris/Sodium build.
+1. Research source and license before adopting code. Modrinth metadata alone is not sufficient: inspect the actual repository license and file provenance.
+2. Prefer vertex-stage effects and analytic math over additional full-screen passes or per-pixel ray marches.
+3. Make distance falloff explicit for high-frequency water, cloud and foliage detail to avoid shimmer and wasted work at distance. If the fade is zero, skip the high-frequency calculation rather than multiplying an already-computed result by zero.
+4. Keep terrain and shadow vertex displacement mathematically identical.
+5. Do not add geometry or claim fuller silhouettes; shader-only foliage work must stay within existing vertex topology.
+6. Static CI checks and ZIP packaging are not GPU compilation, in-game visual validation or FPS benchmarking.
+7. Measure on the target Linux Mint / Intel HD 5500 system before making performance claims.
 
 ## Next implementation order
 
-1. Finish v0.10.2 source/CI checks, then compare matched screenshots for sky overhead, horizon, shallow/deep water, a river, a forest canopy, a grass field and shrubs.
-2. Build a separate optional foliage companion pack from the MIT candidates. First inspect and validate Edgy Foliage's grass/plant models and BetterLeavesLite's leaf approach; avoid conflicting leaf overrides.
-3. Test the companion pack's geometry cost and culling on the HD 5500. If the added models reduce FPS too much, keep it optional and provide a lighter preset.
-4. Only after visual checks, tune cloud count/coverage and water opacity to the user's actual preference. Do not add volumetric ray marches, SSR or large shadow maps to the default HD 5500 profile.
+1. Audit and refine shader-only foliage animation: natural phase variation, restrained gusts, stable world-space motion, distance fade and shadow parity. Confirm the leaf block-ID tags on Iris 1.8.x and watch for cracks or visible canopy shearing in-game.
+2. Review water detail and depth response against the low-end design: avoid costly extra texture fetches and unnecessary wave work at distance.
+3. Improve cloud distribution and shading within the existing fixed sample budget before considering any extra samples.
+4. Add a real shader-preprocessing/GLSL validation stage if it can reproduce the Iris 1.8.x compatibility environment.
+5. Keep the release artifact to one shader ZIP and update this checkpoint after every durable change.

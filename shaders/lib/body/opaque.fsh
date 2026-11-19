@@ -40,7 +40,7 @@ void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
 
 #ifdef NOVA_VEGETATION_SWAY
-    if (vVegetationBlock > 100.5) {
+    if (vVegetationBlock > 100.5 && vVegetationBlock < 103.5) {
         vec3 worldPos = cameraPosition + vPlayerPos;
         float patchTone = valueNoise(worldPos.xz * 0.24 + vec2(worldPos.y * 0.015));
         float variation = mix(0.90, 1.10, patchTone);
@@ -49,7 +49,7 @@ void main() {
         vec3 foliageTint = mix(vec3(0.96, 1.03, 0.94),
                                vec3(1.04, 0.98, 0.90), patchTone);
         float coverage = 1.0;
-        if (vVegetationBlock > 101.5) {
+        if (vVegetationBlock > 101.5 && vVegetationBlock < 102.5) {
             coverage = smoothstep(0.65, 0.90, normalize(vNormal).y);
         }
         albedo.rgb *= mix(1.0, variation, coverage);
@@ -92,7 +92,7 @@ void main() {
 
     colour = applyLighting(albedo.rgb, normal, vLightCoord, shadow, sky);
 #ifdef NOVA_VEGETATION_SWAY
-    if (vVegetationBlock > 100.5 && vVegetationBlock < 101.5) {
+    if ((vVegetationBlock > 100.5 && vVegetationBlock < 101.5) || vVegetationBlock > 102.5) {
         float backlit = max(dot(-normal, sky.lightDir), 0.0) * sky.day;
         vec3 transmissionTint = mix(vec3(0.025, 0.10, 0.015),
                                     vec3(0.13, 0.075, 0.035), sky.sunset);
