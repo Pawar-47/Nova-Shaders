@@ -54,7 +54,7 @@ No shader compile, in-game visual check or FPS benchmark has been performed for 
 
 ## Verification status
 
-- GitHub Actions run `44615861329` passed on commit `e2fd2ef`: shader source checks, optional foliage JSON/reference checks, packaging of both ZIPs, and upload of both artifacts all succeeded. The two artifacts are `nova-shaders-0.10.2` and `nova-natural-foliage-0.10.2`; the release step was correctly skipped on the pull-request branch.
+- GitHub Actions run `44615954776` passed on commit `29b3a28`: shader source checks, optional foliage JSON/reference checks, packaging of both ZIPs, and upload of both artifacts all succeeded. The two artifacts are `nova-shaders-0.10.2` and `nova-natural-foliage-0.10.2`; the release step was correctly skipped on the pull-request branch.
 - This is static validation and archive packaging only. The shaders have not been compiled by a GLSL driver, loaded in Iris, rendered in Minecraft, or benchmarked on the Intel HD 5500.
 - The balanced overhead cloud field (0.014 near-view scale and 0.050 detail scale), matching source-check assertion, cutout-mipped leaf render-layer check, horizontal-only water opacity floor, and `PERFORMANCE` preset are included in this passing run.
 - `PERFORMANCE` sets `SHADOWS=0`; Iris's conditional `shadow.enabled = false` disables the shadow render pass itself, not just fragment shadow sampling. FXAA is also disabled; clouds and water remain enabled.
