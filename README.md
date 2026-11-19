@@ -8,7 +8,16 @@ and 12 GB of RAM on Windows. Every choice in it follows from that - a forward li
 instead of a deferred one, one shadow map with four filtered taps, one shared noise field,
 and two full screen passes where most packs have a dozen.
 
-Version **0.2.0**. MIT licensed. It has not been benchmarked (see below).
+Version **0.3.0**. MIT licensed. It has not been benchmarked (see below).
+
+## What changed in 0.3.0
+
+- **Red, green and blue are adjustable separately.** Three channel gains on the Color
+  screen, `COLOR_RED`, `COLOR_GREEN` and `COLOR_BLUE`, all three as sliders. They multiply
+  the image in linear light before the tonemapper, which is what makes them a channel
+  correction and not a brightness tweak: 1.0 leaves a channel alone, 0.85 pulls it back, 1.2
+  pushes it. The small fixed white balance that keeps daylight neutral stays underneath
+  them, so the defaults still look exactly like 0.2.0.
 
 ## What changed in 0.2.0
 
@@ -49,14 +58,14 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 - **Water**: five swells plus two fine ripples summed into the surface normal, ripples faded
   out with distance, Schlick Fresnel, a slightly desaturated sky reflection, a sun glint,
   and red absorption in the body colour.
-- **Post**: exposure, ACES tonemapping, saturation and contrast, an underwater tint, FXAA,
-  a soft vignette and a 4x4 ordered dither.
+- **Post**: exposure, per channel red/green/blue gains, ACES tonemapping, saturation and
+  contrast, an underwater tint, FXAA, a soft vignette and a 4x4 ordered dither.
 - **Cutout alpha test** in both the gbuffer and the shadow pass, so leaves and grass look
   and shadow correctly.
 - **Shader Pack Settings**: three screens (Color, Scene, Quality) with sliders, and two
   presets, `DEFAULT` and `POTATO`.
 
-## What is deliberately not in 0.1.0
+## What is deliberately not in 0.3.0
 
 Not missing by accident - left out on purpose, and listed here so nobody has to guess:
 

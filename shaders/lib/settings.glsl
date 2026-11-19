@@ -13,6 +13,9 @@
 #define COLOR_EXPOSURE 1.0 // [0.6 0.8 1.0 1.15 1.4 1.7 2.0] Exposure applied before tonemapping. Raise it if the scene looks muddy.
 #define COLOR_SATURATION 1.0 // [0.0 0.5 0.75 0.9 1.0 1.1 1.25 1.5 2.0] Colour saturation, applied after tonemapping.
 #define COLOR_CONTRAST 1.0 // [0.7 0.8 0.9 1.0 1.1 1.2 1.3] Contrast around mid grey, applied after tonemapping.
+#define COLOR_RED 1.0 // [0.5 0.6 0.7 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.3 1.4 1.5] Red channel gain, applied in linear light before tonemapping. 1.0 leaves red untouched.
+#define COLOR_GREEN 1.0 // [0.5 0.6 0.7 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.3 1.4 1.5] Green channel gain, applied in linear light before tonemapping. 1.0 leaves green untouched.
+#define COLOR_BLUE 1.0 // [0.5 0.6 0.7 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.3 1.4 1.5] Blue channel gain, applied in linear light before tonemapping. 1.0 leaves blue untouched.
 #define COLOR_VIGNETTE 0.15 // [0.0 0.15 0.25 0.35 0.5 0.7 1.0] Corner darkening. 0.0 turns it off.
 #define COLOR_DITHER 1 // [0 1] Ordered dither on the output, hides banding in sky and fog gradients.
 #define ANTI_ALIASING 1 // [0 1] FXAA. Set to 0 if you need the frames more than the edges.

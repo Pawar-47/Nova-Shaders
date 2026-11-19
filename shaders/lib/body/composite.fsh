@@ -29,16 +29,23 @@ vec3 underwaterGrade(vec3 linearColour) {
 }
 
 void main() {
+    // The house white balance: the filmic curve lifts the blue channel a little on
+    // its own, and this keeps daylight reading as daylight.
+    const vec3 WHITE_BALANCE = vec3(1.030, 1.000, 0.975);
+
+    // The three channel gains from Shader Pack Settings sit on top of it, in
+    // linear light and before the tonemapper. That is what makes them a channel
+    // correction rather than a brightness control: 1.0 leaves a channel alone,
+    // 0.8 pulls it back, 1.2 pushes it.
+    vec3 channels = vec3(COLOR_RED, COLOR_GREEN, COLOR_BLUE);
+
     vec2 uv = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
     vec3 scene = texture(colortex0, uv).rgb;
 
     // The gbuffer shaders write display encoded colour, so decode before
     // grading: exposure and tonemapping only mean anything in linear light.
     vec3 colour = sRGBToLinear(scene) * COLOR_EXPOSURE;
-
-    // A very small warm balance. The filmic curve lifts the blue channel a
-    // little on its own, and this keeps the result reading as daylight.
-    colour *= vec3(1.030, 1.000, 0.975);
+    colour *= WHITE_BALANCE * channels;
 
 #if UNDERWATER_TINT == 1
     if (isEyeInWater == 1) colour = underwaterGrade(colour);
