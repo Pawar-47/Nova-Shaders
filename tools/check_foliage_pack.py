@@ -30,6 +30,8 @@ if meta:
 base_path = ROOT / "assets/nova/models/block/natural_leaves.json"
 base = read_json(base_path)
 if base:
+    if base.get("render_type") != "minecraft:cutout_mipped":
+        fail("natural_leaves.json must preserve the vanilla cutout-mipped leaf render layer")
     elements = base.get("elements", [])
     if len(elements) != 2:
         fail("natural_leaves.json must contain one cube and one lightweight foliage plane")
