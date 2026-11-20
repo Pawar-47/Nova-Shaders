@@ -8,8 +8,56 @@ Windows. The pack stays on a compact forward pipeline, one shadow map, a small c
 march and two full-screen passes. It has not been benchmarked on this hardware, so no FPS or
 performance guarantee is claimed; start with the POTATO preset and adjust from there.
 
-Version **0.10.1**. MIT licensed; third-party MIT adaptations are recorded in
+Version **0.11.0**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+## What changed in 0.11.0
+
+An audit of the whole pipeline, with the defects it found fixed rather than documented.
+
+- **Leaf and log blocks were being sheared.** The wind offset was applied to every
+  vertex of every block on the vegetation list, and that list included leaves. A leaf
+  block is six full block faces, so its top edge moved sideways while its bottom edge
+  stayed: every leaf cube leaned in a different direction from its neighbours and a
+  canopy tore itself apart. Leaves and vines now sit on their own block ID (103) and
+  are never displaced in the vertex stage. Only the crossed-quad plants on ID 101 bend.
+- **Foliage has surface relief and real translucency.** A leaf face is one flat quad,
+  so vanilla light fills it with a single tone. Leaves and plants now tilt their
+  normal with a world-space noise gradient, and receive a chlorophyll-green backlight
+  term through the shaded side that is roughly three times the previous strength.
+  Trunks on ID 104 get a vertically stretched bark relief, which is what turns a
+  trunk from a flat slab into a rough cylinder.
+- **Shadows have a soft edge.** The filter was a fixed 2x2 grid of half-texel taps,
+  which can only ever return five levels of coverage and reads as a cut-out edge. It
+  is now an eight-tap golden-angle spiral whose radius grows with distance and with
+  the angle to the light, compared through a smoothstep band instead of a hard step.
+- **The colour buffer keeps its highlights.** `colortex0` was RGBA8 with the
+  half-float declaration commented out, so the sun disc, the moonlight, water glitter
+  and emissive blocks all clipped at 1.0 before the tonemapper. It is RGBA16F now,
+  which is also what makes the next item possible.
+- **Bloom.** Eight taps on two rings collect everything brighter than white and add it
+  back as a glow, so the sun is a disc with light around it instead of a flat white
+  coin. Default 0.30, and 0.0 removes the pass entirely.
+- **Clouds are lit from the inside.** Shading was a function of only height and
+  density, so a puff was one flat tone. The density field's own gradient along the
+  light direction now separates a lit face from a shaded flank, at no extra cost: the
+  gradient version of the value noise hashes exactly the same four corners.
+- **The cloud slab no longer ghosts itself.** With the camera above the deck looking
+  down, the entry point is behind the eye, and clamping it to zero marched the empty
+  air between the eye and the slab as if it were cloud. The intersection is solved
+  properly now and rejects both behind-camera and past-limit segments.
+- **Water reads as water at grazing angles.** The wave normal was faded by the view
+  incidence, which flattened exactly the angles where a real surface shows the most
+  detail and where the sun path lives. It fades with distance instead.
+- **Water geometry no longer opens shoreline gaps.** The displaced surface could rise
+  above the block top while the vertical faces stayed put, leaving a hairline of empty
+  space at every beach and pool edge. The wave is now biased so its crest sits exactly
+  on the water plane and every other point dips below it.
+
+These are source-level changes; nothing in this release was rendered or benchmarked.
+The two changes with the most risk are the eight-tap shadow spiral and the bloom pass:
+both cost texture bandwidth, and both need an in-game look before they can be called
+an improvement rather than a change.
 
 ## What changed in 0.10.1
 
@@ -197,14 +245,13 @@ and it is a budget question rather than an option that is still switched off:
   up to 6000 blocks away, so distant samples land hundreds of blocks apart. The horizon LOD
   turns that into a stable band instead of grain, but it cannot invent detail. Packs with
   crisp clouds march far more steps or sample a precomputed 3D noise volume.
-- **Shadows.** One 512 or 1024 map over 48-96 blocks with four filter taps gives hard, slightly
-  stepped edges. Coloured, wide, high-resolution shadows need more taps and bandwidth than an
-  HD Graphics 5500 should spend.
-- **No screen-space effects.** No SSAO, no screen-space reflections, no volumetric light and
-  no bloom. Water mirrors the sky gradient only, so hills and trees are never reflected.
-- **Highlight range.** `colortex0` stays RGBA8 - the half-float format at the top of
-  `lib/body/composite.fsh` is commented out - so the sun disc and emissive geometry clip at
-  1.0 before the tonemapper sees them.
+- **Shadows.** One 512 or 1024 map over 48-96 blocks with eight filter taps. The spiral gives
+  a gradient instead of a staircase, but a penumbra that broadens near the caster (PCSS) or
+  coloured, translucent shadows need a second depth map and more taps than an HD Graphics 5500
+  should spend.
+- **No screen-space effects beyond bloom.** No SSAO, no screen-space reflections and no
+  volumetric light. Water mirrors the sky gradient only, so hills and trees are never
+  reflected, and there is no contact darkening where geometry meets the ground.
 - **Shading space.** Gbuffer colour stays display encoded to save a decode per pixel, so the
   light multiply is not fully linear and the contrast is approximated rather than physical.
 - **Textures.** The pack ships no textures. Vanilla 16x foliage and stone keep their own
@@ -255,9 +302,9 @@ No code from BSL Shaders, Complementary Shaders or MakeUp Ultra Fast is included
 
 ## Not benchmarked
 
-These changes have not been GPU-compiled, visually checked in Minecraft, or benchmarked. The repository includes `tools/check_shaders.sh`, a static source checker for required files, version and pack metadata, entry-point and stage pairing, include resolution, preprocessor balance (including `block.properties`), the water/vegetation/grass-block mappings and interfaces, shared water and wind paths, cloud horizon LOD and optical-depth bounds, and option definitions/labels and controls. It does not compile GLSL or establish runtime compatibility, visual quality or performance. CI runs it, and the packaging script, for every push and pull request.
+These changes have not been GPU-compiled, visually checked in Minecraft, or benchmarked. The repository includes `tools/check_shaders.sh`, a static source checker for required files, version and pack metadata, entry-point and stage pairing, include resolution, preprocessor balance (including `block.properties`), the water, plant, leaf, log and grass-block mappings and interfaces, the rule that only crossed-quad plants are bent in the vertex stage, shared water and wind paths, the foliage relief and backlight terms, cloud horizon LOD, optical-depth bounds and directional shading, the eight-tap shadow filter, the RGBA16F colour target and the bloom, and option definitions/labels and controls. It does not compile GLSL or establish runtime compatibility, visual quality or performance. CI runs it, and the packaging script, for every push and pull request.
 
-No frame times are claimed. If Iris reports a compile failure, its shader log (`logs/latest.log`) should identify the file and line. Useful checks are matched before/after views of close and distant water, vegetation and shadows, and clouds at the horizon. Also check translucent entities, rain and the Nether.
+No frame times are claimed. If Iris reports a compile failure, its shader log (`logs/latest.log`) should identify the file and line. Useful checks are matched before/after views of close and distant water, vegetation and shadows, and clouds at the horizon. Bloom and the wider shadow filter are the two costs worth measuring first; set **Bloom** to 0.0 and **Shadow softness** to 0.5 to see what they take. Also check translucent entities, rain and the Nether.
 
 ## Repository layout
 
@@ -268,7 +315,7 @@ LICENSE                   MIT
 THIRD-PARTY-NOTICES.txt   adaptation attributions and MIT notices
 shaders/
   shaders.properties      option screens, sliders and the two presets
-  block.properties        Iris water, vegetation and grass-block material IDs
+  block.properties        Iris material IDs: 100 water, 101 plants, 103 leaves, 104 logs, 102 grass blocks
   lang/en_us.lang         labels, tooltips and on/off values
   gbuffers_*.vsh/.fsh     entry points with program defines and shared-body includes
   shadow.vsh/.fsh         renders the shadow map with matching foliage sway
@@ -279,7 +326,7 @@ shaders/
     uniforms.glsl         declarations for the Iris uniforms the pack reads
     util.glsl             colour space, ACES, hash, value noise and its gradient, dither
     sky.glsl              day/sunset amounts, gradient, discs, the cloud slab
-    shadow.glsl           shadowFactor: four taps, slope scaled bias
+    shadow.glsl           shadowFactor: eight spiral taps, soft band, distance scaled radius
     lighting.glsl         sunlight, skylight ambient, warm block light, applyLighting
     water.glsl            slope normal, Fresnel, reflection, glitter
     water_waves.glsl      shared analytic water height and slope field

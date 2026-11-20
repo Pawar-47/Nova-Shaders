@@ -19,6 +19,7 @@
 #define COLOR_VIGNETTE 0.15 // [0.0 0.15 0.25 0.35 0.5 0.7 1.0] Corner darkening. 0.0 turns it off.
 #define COLOR_DITHER 1 // [0 1] Ordered dither on the output, hides banding in sky and fog gradients.
 #define ANTI_ALIASING 1 // [0 1] FXAA. Set to 0 if you need the frames more than the edges.
+#define BLOOM_STRENGTH 0.30 // [0.0 0.15 0.30 0.45 0.60] Glow collected from everything brighter than white: the sun, water glitter and lit emissive blocks. 0.0 removes the pass completely.
 
 // ------------------------------------------------------------------ Scene ---
 #define SUN_STRENGTH 1.0 // [0.25 0.5 0.75 1.0 1.25 1.5 2.0] Strength of direct sunlight, and of moonlight at night.

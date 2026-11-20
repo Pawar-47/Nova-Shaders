@@ -11,8 +11,12 @@
 #   * preprocessor conditionals balance in every file
 #   * options used by shaders.properties exist in the shaders and have a label
 #     in shaders/lang/en_us.lang
-#   * water, vegetation and grass mappings agree with their shader interfaces
-#   * the cloud horizon LOD blends fields and bounds per-step optical depth
+#   * water, vegetation, leaf, log and grass mappings agree with their interfaces
+#   * only crossed-quad plants are bent in the vertex stage
+#   * the cloud horizon LOD blends fields, bounds per-step optical depth and reads
+#     the field gradient for directional shading
+#   * shadows use the eight tap spiral with a soft comparison band
+#   * colortex0 is a half float target and the bloom is built from its excess
 #   * pack.mcmeta is valid JSON and VERSION is a plain version number
 
 set -uo pipefail
@@ -120,11 +124,16 @@ if [ -f "$block_props" ]; then
     if ! grep -qE '^[[:space:]]*block\.101[[:space:]]*=' "$block_props"; then
         fail "shaders/block.properties: block ID 101 must map vegetation tags"
     fi
-    for tag in leaves flowers tall_flowers saplings crops; do
+    for tag in small_flowers tall_flowers saplings crops leaves; do
         if ! grep -qE "(^|[[:space:]])%minecraft:$tag([[:space:]]|$)" "$block_props"; then
             fail "shaders/block.properties: vegetation mapping is missing %minecraft:$tag"
         fi
     done
+    # The wide flowers tag holds full cubes (flowering azalea, chorus flower), which
+    # must never reach the sheared ID 101.
+    if grep -qE "(^|[[:space:]])%minecraft:flowers([[:space:]]|$)" "$block_props"; then
+        fail "shaders/block.properties: %minecraft:flowers includes full cubes; use %minecraft:small_flowers"
+    fi
     for plant in minecraft:short_grass minecraft:tall_grass minecraft:fern minecraft:large_fern minecraft:dead_bush minecraft:seagrass minecraft:tall_seagrass; do
         if ! grep -qF "$plant" "$block_props"; then
             fail "shaders/block.properties: vegetation mapping is missing $plant"
@@ -132,6 +141,15 @@ if [ -f "$block_props" ]; then
     done
     if ! grep -qE '^[[:space:]]*block\.102[[:space:]]*=[[:space:]]*minecraft:grass_block([[:space:]]|$)' "$block_props"; then
         fail "shaders/block.properties: block ID 102 must map to minecraft:grass_block"
+    fi
+    if ! grep -qF 'block.103 = %minecraft:leaves minecraft:vine' "$block_props"; then
+        fail "shaders/block.properties: block ID 103 must map leaves and vines, not the crossed-quad list"
+    fi
+    if ! grep -qF 'block.104 = %minecraft:logs' "$block_props"; then
+        fail "shaders/block.properties: block ID 104 must map %minecraft:logs"
+    fi
+    if grep -qE '^[[:space:]]*block\.101[[:space:]]*=.*%minecraft:leaves' "$block_props"; then
+        fail "shaders/block.properties: leaves must not sit on block ID 101, which is sheared in the vertex stage"
     fi
 fi
 
@@ -160,9 +178,18 @@ if ! grep -qF 'flat out float vVegetationBlock;' "$shaders/lib/body/opaque.vsh" 
    ! grep -qF 'vVegetationBlock = mc_Entity.x;' "$shaders/lib/body/opaque.vsh"; then
     fail "vegetation material ID varying is not paired between terrain stages"
 fi
-if ! grep -qF 'if (vVegetationBlock > 100.5)' "$shaders/lib/body/opaque.fsh" ||
-   ! grep -qF 'if (vVegetationBlock > 101.5)' "$shaders/lib/body/opaque.fsh"; then
-    fail "terrain shading does not distinguish vegetation from grass-block ID 102"
+if ! grep -qF 'bool isPlant = abs(vVegetationBlock - 101.0) < 0.5;' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'bool isGrassBlock = abs(vVegetationBlock - 102.0) < 0.5;' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'bool isLeaves = abs(vVegetationBlock - 103.0) < 0.5;' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'bool isLog = abs(vVegetationBlock - 104.0) < 0.5;' "$shaders/lib/body/opaque.fsh"; then
+    fail "terrain shading must resolve block IDs 101 plants, 102 grass blocks, 103 leaves and 104 logs"
+fi
+if ! grep -qF 'valueNoiseGradient(foliagePos.xz * 1.40' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'vec3(0.10, 0.26, 0.06)' "$shaders/lib/body/opaque.fsh"; then
+    fail "foliage needs normal relief and translucency backlighting to stop reading as flat cubes"
+fi
+if [ "$(grep -c 'mc_Entity.x == 101.0' "$shaders/lib/body/opaque.vsh")" -ne 1 ]; then
+    fail "opaque vertex stage must bend exactly the crossed-quad plant ID 101"
 fi
 if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/water.glsl" ||
@@ -203,7 +230,7 @@ if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" |
     fail "cloud march does not blend to a stable low-frequency horizon field"
 fi
 if ! grep -qF 'float horizonMass = valueNoise(midPoint * fieldScale + wind);' "$sky" ||
-   ! grep -qF '1.0 - horizonLod, horizonMass, horizonLod' "$sky"; then
+   ! grep -qF 'horizonMass, horizonLod, fieldShade);' "$sky"; then
     fail "cloud horizon density is not shared across the ray-march samples"
 fi
 if ! grep -qF 'float opticalDepthLimit = mix(8.0, 0.90, horizonLod);' "$sky" ||
@@ -212,6 +239,58 @@ if ! grep -qF 'float opticalDepthLimit = mix(8.0, 0.90, horizonLod);' "$sky" ||
 fi
 if ! grep -qF 'float jitter = novaDither(gl_FragCoord.xy) * (1.0 - horizonLod);' "$sky"; then
     fail "cloud pixel jitter must fade out through the horizon LOD"
+fi
+if ! grep -qF 'if (tFar <= 0.0 || tNear > farLimit) return skyColour;' "$sky"; then
+    fail "cloud slab intersection must reject the empty space in front of the deck"
+fi
+if ! grep -qF 'float towardsLight = dot(field.yz, lightXZ) * fieldScale * 90.0;' "$sky" ||
+   ! grep -qF 'heightLight *= 1.0 - fieldShade * 0.70;' "$sky"; then
+    fail "cloud shading must separate a lit face from a shaded one through the field gradient"
+fi
+
+section "water and shadow shape"
+
+water_waves="$shaders/lib/water_waves.glsl"
+if ! grep -qF 'const float NOVA_WATER_CREST' "$water_waves" ||
+   ! grep -qF 'return (shape - NOVA_WATER_CREST)' "$water_waves"; then
+    fail "water displacement must stay at or below the block top, or every shoreline opens a gap"
+fi
+water_lib="$shaders/lib/water.glsl"
+if ! grep -qF 'float swellFade = mix(0.55, 1.0, 1.0 - saturate(viewDistance / 320.0));' "$water_lib"; then
+    fail "water normals must fade with distance rather than with view incidence"
+fi
+if grep -qF 'tilted.xz *= incidence;' "$water_lib"; then
+    fail "water normals still flatten by view incidence, which removes the grazing wave detail"
+fi
+
+shadow_lib="$shaders/lib/shadow.glsl"
+if ! grep -qF 'const vec2 SHADOW_TAPS[8]' "$shadow_lib" ||
+   ! grep -qF 'for (int i = 0; i < 8; i++) {' "$shadow_lib"; then
+    fail "shadow filter must use eight spiral taps"
+fi
+if ! grep -qF 'smoothstep(receiverDepth - bias, receiverDepth - bias + band, storedDepth)' "$shadow_lib"; then
+    fail "shadow comparison must use a soft band instead of a hard step"
+fi
+if ! grep -qF 'float radius = SHADOW_SOFTNESS * mix(0.55, 2.60, distance01) * (0.80 + 0.70 * slope);' "$shadow_lib"; then
+    fail "shadow tap radius must grow with distance and with the angle to the light"
+fi
+
+section "highlight range and bloom"
+
+composite_body="$shaders/lib/body/composite.fsh"
+if ! grep -qE '^const int colortex0Format = RGBA16F;' "$composite_body"; then
+    fail "composite must keep colortex0 in RGBA16F so highlights and bloom have headroom"
+fi
+if grep -qE '^[[:space:]]*(//|/\*|\*)[[:space:]]*const int colortex0Format' "$composite_body"; then
+    fail "composite still has its colortex0Format declaration commented out"
+fi
+if ! grep -qF 'const vec2 BLOOM_TAPS[8]' "$composite_body" ||
+   ! grep -qF 'if (BLOOM_STRENGTH > 0.0) {' "$composite_body" ||
+   ! grep -qF 'colour += novaBloom(uv, texel) * BLOOM_STRENGTH;' "$composite_body"; then
+    fail "composite must build bloom from the buffer's excess over white"
+fi
+if ! grep -qE '^#define BLOOM_STRENGTH [0-9]' "$shaders/lib/settings.glsl"; then
+    fail "settings.glsl must define BLOOM_STRENGTH"
 fi
 
 section "preprocessor balance"

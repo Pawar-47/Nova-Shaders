@@ -136,12 +136,21 @@ vec3 novaMoonDisc(vec3 direction, NovaSky sky) {
  * makes clouds shear, swim and look distorted.
  */
 float novaCloudDensityAt(vec2 worldXZ, float g, float detail, vec2 wind,
-                         float fieldScale, float detailAmount,
-                         float horizonMass, float horizonBlend) {
+                         float fieldScale, float detailAmount, vec2 lightXZ,
+                         float horizonMass, float horizonBlend,
+                         out float fieldShade) {
     // Near the horizon, broaden and stabilize the field across the short march.
     vec2 p = worldXZ * fieldScale + wind;
-    float mass = valueNoise(p);
+    vec3 field = valueNoiseGradient(p);
+    float mass = field.x;
     mass = mix(mass, horizonMass, horizonBlend);
+
+    // The gradient version of the noise hashes exactly the four corners that
+    // valueNoise does, so the field's slope towards the light is free. Where the
+    // field thickens towards the sun this sample sits on the far side of a puff
+    // and belongs in shade; where it thins towards the sun it is a lit face.
+    float towardsLight = dot(field.yz, lightXZ) * fieldScale * 90.0;
+    fieldShade = saturate(towardsLight * 0.55);
 
     // A weak detail field rags the edges only while the ray has enough samples.
     mass += (detail - 0.5) * 0.10 * detailAmount;
@@ -208,21 +217,30 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
     float camY = cameraPosition.y;
 
     // Where the ray enters and leaves the slab, whether the camera is below,
-    // inside or above the clouds.
+    // inside or above the clouds. A bare min/max is not enough: with the eye above
+    // the deck and the ray pointing down, the entry point is behind the camera and
+    // clamping it to zero marched the empty air between the eye and the slab as if
+    // it were cloud, which hung a ghost of the deck above itself.
     float tBottom = (baseY - camY) / dirY;
     float tTop = (baseY + slabThickness - camY) / dirY;
-    float tNear = max(min(tBottom, tTop), 0.0);
+    float tNear = min(tBottom, tTop);
     float tFar = max(tBottom, tTop);
 
     // Past this the deck is smaller than a pixel; cutting it here stops the
     // skyline smearing.
     const float farLimit = 6000.0;
-    if (tNear > farLimit) return skyColour;
+    if (tFar <= 0.0 || tNear > farLimit) return skyColour;
+    tNear = max(tNear, 0.0);
     tFar = min(tFar, farLimit);
     if (tFar <= tNear) return skyColour;
 
     vec2 wind = vec2(frameTimeCounter * 0.0200, frameTimeCounter * 0.0080);
     float stepLength = (tFar - tNear) / float(CLOUD_STEPS);
+
+    // Horizontal direction to the light. The density field's own slope along it
+    // decides which side of a puff a sample sits on, which is how a lit crown is
+    // separated from a shaded flank without a light ray for every sample.
+    vec2 lightXZ = normalize(vec2(sky.lightDir.x, sky.lightDir.z) + vec2(1.0e-4, 0.0));
 
     // The horizon intersects thousands of blocks of cloud slab. Fade to a broad,
     // low-frequency field before the fixed sample budget can turn it into dots.
@@ -254,8 +272,10 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
         float g = saturate((sampleY - baseY) / slabThickness);
 
         vec2 p = cameraPosition.xz + direction.xz * t;
+        float fieldShade = 0.0;
         float density = novaCloudDensityAt(p, g, detail, wind, fieldScale,
-                                            1.0 - horizonLod, horizonMass, horizonLod);
+                                            1.0 - horizonLod, lightXZ,
+                                            horizonMass, horizonLod, fieldShade);
 
         if (density > 0.004) {
             if (!scatteringComputed) {
@@ -267,6 +287,7 @@ vec3 novaSkyWithClouds(vec3 direction, NovaSky sky, vec3 skyColour) {
             // for pow(g, 1.5).
             float heightLight = 0.20 + 0.80 * (g * sqrt(g));
             heightLight *= 1.0 - density * 0.42;
+            heightLight *= 1.0 - fieldShade * 0.70;
             heightLight = mix(heightLight, 1.0, scattering * 0.65);
 
             float opticalDepth = density * stepLength * 0.075;

@@ -24,6 +24,8 @@ option.COLOR_DITHER=Dither
 option.COLOR_DITHER.comment=Adds a fixed ordered pattern before output so slow sky gradients do not band.
 option.ANTI_ALIASING=Anti-aliasing
 option.ANTI_ALIASING.comment=FXAA. Smooths jagged edges for a few pixels of texture detail.
+option.BLOOM_STRENGTH=Bloom
+option.BLOOM_STRENGTH.comment=Glow collected from everything brighter than white: the sun, water glitter and lit emissive blocks. 0.0 removes the pass entirely, and it is the first thing to turn down on slow hardware.
 
 # --------------------------------------------------------------- Scene ------
 option.SUN_STRENGTH=Sunlight

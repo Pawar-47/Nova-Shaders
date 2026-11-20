@@ -63,7 +63,7 @@ jobs:
           # VERSION changes, so an old version's notes are not reused.
           notes="$RUNNER_TEMP/nova-shaders-notes.md"
           cat > "$notes" <<'NOTES'
-          ## Nova Shaders 0.10.1
+          ## Nova Shaders 0.11.0
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
           The target is an Intel Core i3-5005U with Intel HD Graphics 5500, but appearance and
@@ -72,29 +72,35 @@ jobs:
 
           ### Highlights
 
-          - Vegetation sway is anchored at each sprite's base using Iris's mc_midTexCoord, so a
-            plant leans from its roots instead of sliding as a rigid quad, and the shadow pass
-            bends the cast shadow by the identical weight.
-          - block.properties keeps the Iris tag form and adds an explicit 1.21.5 leaf, plant,
-            flower, sapling and crop fallback list, so the vegetation block ID cannot silently go
-            unassigned on a loader without tag support.
-          - Block ID 102 keeps grass blocks on top-face colour variation only; full cubes are not
-            sheared by the wind.
-          - The README now records this pipeline's ceilings - four cloud samples over a long slab,
-            four shadow taps, no SSAO or bloom, an 8-bit colour buffer, display-space shading and
-            vanilla 16x textures - so a look difference is not mistaken for a missing option.
+          - Leaves and vines moved to block ID 103 and are no longer displaced in the vertex
+            stage. They are full cubes, so the previous per-vertex lean sheared every leaf block
+            away from the six beside it; only the crossed-quad plants on ID 101 bend now.
+          - Foliage gains world-space normal relief and a chlorophyll backlight through its shaded
+            side, and logs on ID 104 gain a vertically stretched bark relief.
+          - Shadow filtering is an eight-tap golden-angle spiral with a smoothstep comparison
+            band and a radius that grows with distance and with the angle to the light, replacing
+            a fixed 2x2 grid that could only ever return five coverage levels.
+          - colortex0 is RGBA16F, so the sun disc, moonlight, water glitter and emissive blocks
+            keep their range through the tonemapper, and a two-ring bloom collects everything
+            brighter than white. Bloom strength 0.0 removes the pass entirely.
+          - Clouds shade from the density field's own gradient along the light direction, and the
+            slab intersection now rejects the segment behind the camera instead of marching it.
+          - Water normals fade with distance rather than view incidence, so grazing angles keep
+            their detail and the sun path, and the displaced surface is biased to dip below the
+            water plane so it cannot open a gap at a shoreline.
 
           ### Not benchmarked
 
           The sources have not been GPU-compiled, visually checked in Minecraft, or benchmarked.
           The static checker does not establish GPU compatibility or visual quality. No frame-rate
-          claims are made.
+          claims are made. The eight-tap shadow filter and the bloom are the two new costs; Bloom
+          0.0 and Shadow softness 0.5 are the fastest way to see what they take.
 
           ### Worth testing first
 
-          One grass tuft and one leaf block close up, to see whether they bend rather than shear and
-          whether the shadow keeps up; then a grass field, the cloud horizon, translucent entities,
-          rain, the Nether, and performance on the target GPU.
+          A leaf canopy and a tree trunk close up, a shadow edge near and far, the sun near the
+          horizon, and the water shoreline; then the cloud horizon, translucent entities, rain,
+          the Nether, and performance on the target GPU.
           NOTES
 
           gh release create "$tag" \

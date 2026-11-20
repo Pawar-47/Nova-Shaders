@@ -40,15 +40,25 @@ void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
 
 #ifdef NOVA_VEGETATION_SWAY
-    if (vVegetationBlock > 100.5) {
-        vec3 worldPos = cameraPosition + vPlayerPos;
-        float patchTone = valueNoise(worldPos.xz * 0.24 + vec2(worldPos.y * 0.015));
-        float variation = mix(0.90, 1.10, patchTone);
-        float coverage = 1.0;
-        if (vVegetationBlock > 101.5) {
-            coverage = smoothstep(0.65, 0.90, normalize(vNormal).y);
-        }
-        albedo.rgb *= mix(1.0, variation, coverage);
+    // 101 plants, 102 grass blocks, 103 leaves, 104 logs. Only 101 is also bent in
+    // the vertex stage: a leaf, grass or log block is a full cube, and shearing one
+    // around its sprite midpoint pulls it away from the six blocks beside it.
+    bool isPlant = abs(vVegetationBlock - 101.0) < 0.5;
+    bool isGrassBlock = abs(vVegetationBlock - 102.0) < 0.5;
+    bool isLeaves = abs(vVegetationBlock - 103.0) < 0.5;
+    bool isLog = abs(vVegetationBlock - 104.0) < 0.5;
+
+    vec3 foliagePos = cameraPosition + vPlayerPos;
+    float geometricUp = normalize(vNormal).y;
+
+    if (isPlant || isLeaves || isGrassBlock) {
+        // One low frequency field across the whole world, so a canopy reads as a
+        // set of patches instead of one repeated tone per block. Foliage otherwise
+        // shows the same value on every leaf block in a tree.
+        float patchTone = valueNoise(foliagePos.xz * 0.24 + vec2(foliagePos.y * 0.015));
+        float coverage = (isPlant || isLeaves) ? 1.0
+                       : smoothstep(0.65, 0.90, geometricUp);
+        albedo.rgb *= mix(1.0, mix(0.90, 1.10, patchTone), coverage);
     }
 #endif
 
@@ -74,23 +84,60 @@ void main() {
 #ifdef NOVA_UNLIT
     colour = albedo.rgb * EMISSIVE_GAIN;
 #else
-    vec3 normal = normalize(vNormal);
-    float NdotL = max(dot(normal, sky.lightDir), 0.0);
+    vec3 geometricNormal = normalize(vNormal);
+    vec3 normal = geometricNormal;
 
+#ifdef NOVA_VEGETATION_SWAY
+    // Foliage has no geometry of its own: every leaf face is one flat quad, so
+    // vanilla's per-vertex light leaves a leaf block reading as a painted cube.
+    // Tilting the normal with a world space noise field gives the surface micro
+    // relief, so the sun breaks across a canopy instead of filling it with a
+    // single tone. Bark gets the same treatment with a vertically stretched field,
+    // which is what turns a trunk from a flat slab into a rough cylinder.
+    if (isPlant || isLeaves) {
+        // One perturbation cell is a little under a block, which is coarse enough
+        // not to shimmer at distance and fine enough that a one block leaf face is
+        // not one flat value. The gradient version costs the same four hashes as
+        // the tone patch above, so the relief is effectively free.
+        vec3 relief = valueNoiseGradient(foliagePos.xz * 1.40 + vec2(foliagePos.y * 1.05));
+        normal = normalize(normal + vec3(relief.y, 0.0, relief.z) * 0.42);
+    } else if (isGrassBlock && geometricUp > 0.75) {
+        vec3 relief = valueNoiseGradient(foliagePos.xz * 1.20);
+        normal = normalize(normal + vec3(relief.y, 0.0, relief.z) * 0.18);
+    } else if (isLog && abs(geometricUp) < 0.70) {
+        // Stretched along the trunk: fast around it, slow up it, which is what bark
+        // is. A field that varied just as fast vertically would band at every block
+        // boundary instead of running down the trunk.
+        vec3 relief = valueNoiseGradient(vec2(foliagePos.x * 1.5 + foliagePos.z * 1.5,
+                                              foliagePos.y * 0.85));
+        normal = normalize(normal + vec3(relief.y, relief.z, -relief.y) * 0.26);
+    }
+#endif
+
+    // applyLighting derives its own NdotL from the relief normal below.
 #ifdef NOVA_HAND
     // The first person hand has no meaningful world position, so shadows and
     // fog are skipped rather than sampled from the wrong place.
     float shadow = 1.0;
 #else
-    float shadow = shadowFactor(vPlayerPos, normal, NdotL);
+    // The shadow lookup uses the geometric normal for both the offset and the
+    // slope: feeding it the noise relief would widen the bias on every tilted leaf
+    // and let daylight straight through a canopy.
+    float shadow = shadowFactor(vPlayerPos, geometricNormal,
+                                max(dot(geometricNormal, sky.lightDir), 0.0));
 #endif
 
     colour = applyLighting(albedo.rgb, normal, vLightCoord, shadow, sky);
 #ifdef NOVA_VEGETATION_SWAY
-    if (vVegetationBlock > 100.5 && vVegetationBlock < 101.5) {
+    if (isPlant || isLeaves) {
+        // A leaf is a thin sheet, not a solid: light that enters one side leaves
+        // the other, greener for the chlorophyll it crossed. Without this term a
+        // leaf mass under a bright sky is only its own texture multiplied by shadow,
+        // which is most of why a canopy reads as a flat green slab.
         float backlit = max(dot(-normal, sky.lightDir), 0.0) * sky.day;
-        colour += albedo.rgb * vec3(0.025, 0.10, 0.015)
-                * backlit * SUN_STRENGTH * (0.35 + 0.65 * shadow);
+        float thinness = isLeaves ? 1.0 : 0.75;
+        colour += albedo.rgb * vec3(0.10, 0.26, 0.06) * backlit * thinness
+                * SUN_STRENGTH * (0.30 + 0.70 * shadow);
     }
 #endif
 #endif

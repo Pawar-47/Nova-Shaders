@@ -26,21 +26,23 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 
     // The shared analytic slope matches the higher-frequency vertex displacement.
     // A short-scale noise ripple adds moving detail between Minecraft's sparse vertices.
-    float fineFade = 1.0 - saturate(viewDistance / 72.0);
+    float chopFade = 1.0 - saturate(viewDistance / 48.0);
     vec3 chop = valueNoiseGradient(p * 0.42 + vec2(time * 0.18, -time * 0.14));
 
-    vec2 slope = novaWaterSurfaceSlope(p) * 1.8;
-    slope += chop.yz * 0.055 * fineFade;
+    // The swell is what carries water out to the horizon, and the sun path lives
+    // out there. An earlier version faded the whole tilt by the view incidence,
+    // which flattened exactly the grazing angles where a real surface shows the
+    // most detail and where the glitter is. Distance is the honest reason to
+    // soften it, so that is what fades the one block noise and, gently, the swell.
+    float swellFade = mix(0.55, 1.0, 1.0 - saturate(viewDistance / 320.0));
+
+    vec2 slope = novaWaterSurfaceSlope(p) * 2.2 * swellFade;
+    slope += chop.yz * 0.055 * chopFade;
     slope *= 1.0 + saturate(rainStrength) * 0.25;
 
     // Rain roughens the surface slightly. The normal's vertical axis is Y.
     float flatness = 1.0 - saturate(rainStrength) * 0.08;
     vec3 tilted = normalize(vec3(-slope.x, flatness, -slope.y));
-
-    // Fade the perturbation toward the horizon while preserving the actual up axis.
-    float incidence = abs(dot(geometricNormal, normalize(cameraPosition - worldPos)));
-    tilted.xz *= incidence;
-    tilted.y += 1.0 - incidence;
 
     return normalize(tilted);
 #endif

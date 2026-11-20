@@ -1,6 +1,6 @@
 # Nova Shaders Development Checkpoint
 
-Last updated: 0.10.1 commit (vegetation bending plus audit notes)
+Last updated: 0.11.0 (pipeline audit, defects fixed)
 
 ## Project and target
 
@@ -13,40 +13,45 @@ Last updated: 0.10.1 commit (vegetation bending plus audit notes)
 ## Repository state
 
 - Repository: `https://github.com/Pawar-47/Nova-Shaders.git`, branch `main`, tracking `origin/main`.
-- Published so far: 0.9.0 (`d43a423`) and 0.10.0 (`47be422`, CI job 135831147805, release `v0.10.0` created by the workflow).
-- 0.10.1 in `VERSION`, `pack.mcmeta`, `README.md` and the workflow release notes publishes the audit follow-up below. CI runs the checker and packager first; a failing check stops the release.
+- Published: 0.9.0 (`d43a423`), 0.10.0 (`47be422`), 0.10.1 (`a7bf008`).
+- 0.11.0 is in `VERSION`, `pack.mcmeta`, `README.md` and the workflow release notes, but is **not committed or pushed** as of this checkpoint.
 
+## Material IDs (block.properties)
 
-## Audit: why the pack still reads as basic
+| ID | Blocks | Vertex stage | Fragment stage |
+| --- | --- | --- | --- |
+| 100 | water | top-face height offset (dips only) | wave normal, depth medium |
+| 101 | crossed-quad plants (tag list plus explicit fallback) | bends, weighted by `mc_midTexCoord` | tone patch, normal relief, backlight |
+| 102 | grass block | none | top-face tone patch and relief |
+| 103 | leaves and vines | none | tone patch, stronger relief, backlight |
+| 104 | logs and wood | none | vertical bark relief |
 
-Confirmed by reading the sources, not by rendering:
+Leaves and vines were on 101 until 0.11.0 and were being sheared per face, which tore canopies apart. They must never return to 101.
 
-1. **Cloud sampling, not cloud code, is the limit.** `CLOUD_STEPS` is 4 by default and 3 in POTATO, spread over a slab whose far limit is 6000 blocks. At a low view elevation the four samples are 150-1500 blocks apart, so the field is undersampled by construction. The 0.10.0 horizon LOD blends the samples to one shared broad mass and bounds optical depth, which removes grain but also flattens the band. Detail above roughly six degrees of elevation is still carried by four samples.
-2. **Shadow quality is a budget decision.** One 512/1024 map over 48/96 blocks with four half-texel taps: hard edges, no penumbra variation, no colored shadows. `shadowtex1` is never sampled, so translucent geometry is not excluded.
-3. **No screen-space stage exists.** There is no SSAO, no SSR, no volumetric light and no bloom. `composite.fsh` and `final.fsh` are the only full-screen passes, and water reflects `novaSkyGradient` only, so terrain is never reflected.
-4. **Highlight headroom is off.** The `colortex0Format = RGBA16F` directive in `lib/body/composite.fsh` is commented out, so `colortex0` is 8-bit: the sun disc (peaks near 4.5) and unlit geometry (`EMISSIVE_GAIN` 2.2) clip at 1.0 before the tonemapper.
-5. **Shading runs in display space.** Gbuffers multiply sRGB-encoded texture values by light and the composite decodes once at the end. This is cheap and deliberate, but it compresses midtone contrast and dulls the terminator compared with a linear pipeline.
-6. **Vegetation sway was translating whole quads.** Until this round `novaVegetationOffset` was applied to every vertex of a plant, so a tuft moved sideways as a rigid card instead of bending. Fixed below.
-7. **Textures set the detail ceiling.** The pack ships none; vanilla 16x foliage and stone stay flat regardless of shader work.
-8. **The palette is conservative on purpose.** Ambient is near neutral, fog is restrained, and saturation/exposure default to 1.0.
+## Defects fixed in 0.11.0 (unverified)
 
-## What 0.10.1 changes (unverified)
+1. **Leaf shear.** `opaque.vsh` adds the wind offset to every vertex of ID 101; leaves are full cubes, so the top of each face moved and the block detached from its neighbours. Fixed by moving leaves and vines to ID 103.
+2. **Cloud slab self-ghosting.** `min/max` without a sign test made an above-deck downward ray march the empty air between the eye and the slab. Fixed with a proper interval test that also rejects a `tFar <= 0` segment.
+3. **Water shoreline gap.** The displaced surface could rise above the block top while the vertical faces stayed put. `novaWaterSurfaceHeight` now subtracts `NOVA_WATER_CREST`, so the crest sits on the plane and every other point dips.
+4. **Water normal flattening.** The tilt was multiplied by view incidence, removing wave detail and the sun path exactly at grazing angles. Replaced with a distance fade (fine chop to 48 blocks, swell to 320).
+5. **Shadow filter.** A fixed 2x2 half-texel grid returned five coverage levels. Replaced with an eight-tap golden-angle spiral, a `smoothstep` comparison band and a radius that grows with distance and slope.
 
-- `shaders/lib/body/opaque.vsh` and `shaders/lib/body/shadow.vsh` declare `in vec4 mc_midTexCoord;` and weight the wind offset by `aboveMid`, a tiny smoothstep band around the sprite's own midpoint. The base of a plant stays planted and only the upper part bends; both passes compute the weight identically so the shadow follows.
-- `shaders/lib/vegetation.glsl` raises the lateral amplitude to `vec2(0.24, 0.14)` now that only the top of a plant moves, and documents the midpoint weighting.
-- `shaders/block.properties` adds an explicit `#else` fallback list of 1.21.5 leaf, plant, flower, sapling and crop blocks, so vegetation selection cannot silently fail on a loader without tag support. Grass blocks stay on ID 102 (top-face tint only, no geometry shear).
-- `tools/check_shaders.sh` checks `mc_midTexCoord` in both passes, the shared `aboveMid` weight, and the explicit leaf fallback list.
-- `README.md` gains a "Why it still looks simpler than large packs" section stating the limits above; the vegetation bullet now describes base-anchored bending.
+## Improvements in 0.11.0 (unverified)
+
+- `colortex0Format = RGBA16F` enabled; without it the highlight excess bloom depends on does not exist.
+- Bloom in `composite.fsh`: eight taps on two rings, threshold 0.92 in the encoded buffer, `saturate`-free raw excess decoded once and scaled by `BLOOM_STRENGTH` (default 0.30, POTATO 0.20, 0.0 removes the pass).
+- Foliage and bark normal relief from `valueNoiseGradient`, and a stronger chlorophyll backlight.
+- Cloud directional shading from the density field's gradient along the light direction, at no extra noise cost because `valueNoiseGradient` hashes the same four corners as `valueNoise`.
 
 ## Verification status
 
-- Nothing here was compiled, packaged or rendered. The checker was not run locally; CI runs it for this commit before packaging and release.
-- The previous commits' visual behaviour is also unverified: no screenshot comparison exists for 0.9.0 or 0.10.0.
-- `mc_midTexCoord` is bound by Iris at attribute location 12 (`ProgramCreator`), and the terrain and shadow vertex formats both carry it, so the attribute itself is expected to resolve.
+- Nothing here was compiled, packaged or rendered. The checker was not run locally; CI runs it for the next commit before packaging and release.
+- No screenshot comparison exists for any version. Performance is unmeasured on the i3-5005U / HD Graphics 5500.
+- Highest-risk items: the eight-tap shadow spiral (bandwidth), the bloom pass (bandwidth), and whether the RGBA16F target is affordable at the target resolution.
 
 ## Next actions
 
-1. Read the CI result for the 0.10.1 commit. If `Check the shader sources` fails, fix the reported invariant exactly and push again rather than editing VERSION.
-2. Get matched in-game screenshots on the target machine: the same plant close up (to see whether it bends or shears), the same leaf block, a grass field, and the cloud horizon. Without those, the sway weight and the horizon LOD are guesses.
-3. If more visual quality is wanted, the honest order is: enable RGBA16F for `colortex0`; raise `CLOUD_STEPS` on anything faster than the HD 5500; then add a compact SSAO in `composite.fsh`. Each needs an in-game comparison before it can be called an improvement.
-4. Tree structure and grass density remain out of reach for GLSL; that is a resource pack or world-generation change.
+1. Commit and push 0.11.0; read the CI result. If `Check the shader sources` fails, fix the reported invariant rather than editing VERSION.
+2. Get matched in-game screenshots on the target machine: a leaf canopy and a trunk close up, a shadow edge near and far, the sun near the horizon, a water shoreline, and the cloud horizon.
+3. If the frame rate drops, measure in this order: Bloom 0.0, then Shadow softness 0.5, then `shadowMapResolution` 512, then CLOUD_STEPS 3.
+4. Remaining honest ceilings if more quality is wanted: no SSAO, no screen-space reflections, no volumetric light, display-space shading, four cloud samples, and vanilla 16x textures.
