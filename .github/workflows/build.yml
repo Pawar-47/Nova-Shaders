@@ -66,28 +66,35 @@ jobs:
           ## Nova Shaders 0.11.0
 
           A compact shader pack for Minecraft Java 1.21.5 with Iris 1.8.x and Sodium.
-          The target is an Intel Core i3-5005U with Intel HD Graphics 5500, but appearance and
+          The target is an Intel Core i3-5005U with Intel HD Graphics 5500 on Linux Mint, but appearance and
           performance have not been verified on that hardware. MIT-licensed adaptations from
           Glimmer and Spectrum are documented in THIRD-PARTY-NOTICES.txt.
 
           ### Highlights
 
-          - Leaves and vines moved to block ID 103 and are no longer displaced in the vertex
-            stage. They are full cubes, so the previous per-vertex lean sheared every leaf block
-            away from the six beside it; only the crossed-quad plants on ID 101 bend now.
-          - Foliage gains world-space normal relief and a chlorophyll backlight through its shaded
-            side, and logs on ID 104 gain a vertically stretched bark relief.
-          - Shadow filtering is an eight-tap golden-angle spiral with a smoothstep comparison
-            band and a radius that grows with distance and with the angle to the light, replacing
-            a fixed 2x2 grid that could only ever return five coverage levels.
-          - colortex0 is RGBA16F, so the sun disc, moonlight, water glitter and emissive blocks
-            keep their range through the tonemapper, and a two-ring bloom collects everything
-            brighter than white. Bloom strength 0.0 removes the pass entirely.
-          - Clouds shade from the density field's own gradient along the light direction, and the
-            slab intersection now rejects the segment behind the camera instead of marching it.
-          - Water normals fade with distance rather than view incidence, so grazing angles keep
-            their detail and the sun path, and the displaced surface is biased to dip below the
-            water plane so it cannot open a gap at a shoreline.
+          - Leaves and vines sit on block ID 103 and are displaced by a continuous
+            world-space wind field rather than the plant hinge, so vertices shared by
+            adjoining leaf cubes get the same offset and a canopy cannot open a crack.
+            Ground plants keep the sprite-midpoint hinge on ID 101, which a full cube
+            must never use.
+          - Foliage gains world-space normal relief, warm/cool patch variation and a
+            stronger chlorophyll backlight; logs on ID 104 gain a bark relief.
+          - Shadow filtering is an eight-tap golden-angle spiral with a smoothstep
+            comparison band and a radius that grows with distance and with the angle
+            to the light, replacing a fixed 2x2 grid that could only return five
+            coverage levels.
+          - colortex0 is RGBA16F, so the sun disc, moonlight, water glitter and
+            emissive blocks keep their range through the tonemapper, and a two-ring
+            bloom collects everything brighter than white. Bloom 0.0 removes the pass.
+          - Clouds shade from the density field's own gradient along the light
+            direction, inside the same skewed domain that broadens the islands, and the
+            slab intersection no longer marches the air behind the camera.
+          - Water normals fade with distance rather than view incidence, so grazing
+            angles keep their detail and the sun path, and the displaced surface is
+            biased to dip below the water plane so it cannot open a shoreline gap.
+          - Keeps the 0.10.4 budgets: 512px shadows over 64 blocks by default, a
+            PERFORMANCE preset that disables the shadow pass and FXAA, and the 0.82
+            horizontal water opacity floor.
 
           ### Not benchmarked
 

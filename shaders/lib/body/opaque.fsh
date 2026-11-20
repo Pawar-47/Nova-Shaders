@@ -40,9 +40,9 @@ void main() {
     vec4 albedo = texture(gtexture, vTexCoord) * vTint;
 
 #ifdef NOVA_VEGETATION_SWAY
-    // 101 plants, 102 grass blocks, 103 leaves, 104 logs. Only 101 is also bent in
-    // the vertex stage: a leaf, grass or log block is a full cube, and shearing one
-    // around its sprite midpoint pulls it away from the six blocks beside it.
+    // 101 ground plants, 102 grass blocks, 103 leaves, 104 logs. The vertex stage
+    // gives 101 a sprite hinge and 103 a continuous world-space field, so neither
+    // one is a rigid translation of a whole quad.
     bool isPlant = abs(vVegetationBlock - 101.0) < 0.5;
     bool isGrassBlock = abs(vVegetationBlock - 102.0) < 0.5;
     bool isLeaves = abs(vVegetationBlock - 103.0) < 0.5;
@@ -59,6 +59,11 @@ void main() {
         float coverage = (isPlant || isLeaves) ? 1.0
                        : smoothstep(0.65, 0.90, geometricUp);
         albedo.rgb *= mix(1.0, mix(0.90, 1.10, patchTone), coverage);
+        // A restrained warm/cool shift breaks up a uniform canopy while leaving
+        // the biome tint from the vertex colour in charge of the actual species hue.
+        vec3 foliageTint = mix(vec3(0.96, 1.03, 0.94),
+                               vec3(1.04, 0.98, 0.90), patchTone);
+        albedo.rgb *= mix(vec3(1.0), foliageTint, coverage * 0.55);
     }
 #endif
 
@@ -131,12 +136,14 @@ void main() {
 #ifdef NOVA_VEGETATION_SWAY
     if (isPlant || isLeaves) {
         // A leaf is a thin sheet, not a solid: light that enters one side leaves
-        // the other, greener for the chlorophyll it crossed. Without this term a
-        // leaf mass under a bright sky is only its own texture multiplied by shadow,
-        // which is most of why a canopy reads as a flat green slab.
+        // the other, greener for the chlorophyll it crossed and warmer as the sun
+        // drops. Without this a leaf mass under a bright sky is only its own
+        // texture multiplied by shadow, which is why a canopy reads as a flat slab.
         float backlit = max(dot(-normal, sky.lightDir), 0.0) * sky.day;
+        vec3 transmissionTint = mix(vec3(0.10, 0.26, 0.06),
+                                    vec3(0.30, 0.19, 0.09), sky.sunset);
         float thinness = isLeaves ? 1.0 : 0.75;
-        colour += albedo.rgb * vec3(0.10, 0.26, 0.06) * backlit * thinness
+        colour += albedo.rgb * transmissionTint * backlit * thinness
                 * SUN_STRENGTH * (0.30 + 0.70 * shadow);
     }
 #endif

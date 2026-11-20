@@ -22,22 +22,25 @@ vec3 novaWaterNormal(vec3 worldPos, vec3 geometricNormal) {
 
     vec2 p = worldPos.xz;
     float time = frameTimeCounter;
-    float viewDistance = length(worldPos - cameraPosition);
+    vec3 cameraRelative = worldPos - cameraPosition;
+    float distanceSquared = dot(cameraRelative, cameraRelative);
 
     // The shared analytic slope matches the higher-frequency vertex displacement.
-    // A short-scale noise ripple adds moving detail between Minecraft's sparse vertices.
-    float chopFade = 1.0 - saturate(viewDistance / 48.0);
-    vec3 chop = valueNoiseGradient(p * 0.42 + vec2(time * 0.18, -time * 0.14));
-
+    // The extra noise ripple is only useful nearby, so past its range the
+    // gradient-noise evaluation is skipped entirely rather than multiplied by zero.
+    //
     // The swell is what carries water out to the horizon, and the sun path lives
-    // out there. An earlier version faded the whole tilt by the view incidence,
-    // which flattened exactly the grazing angles where a real surface shows the
-    // most detail and where the glitter is. Distance is the honest reason to
-    // soften it, so that is what fades the one block noise and, gently, the swell.
-    float swellFade = mix(0.55, 1.0, 1.0 - saturate(viewDistance / 320.0));
+    // out there, so it keeps most of its strength far away. Fading the whole tilt
+    // by view incidence, as an earlier version did, flattened exactly the grazing
+    // angles where a real surface shows the most detail and where the glitter is.
+    float swellFade = mix(0.55, 1.0, 1.0 - saturate(sqrt(distanceSquared) / 320.0));
 
     vec2 slope = novaWaterSurfaceSlope(p) * 2.2 * swellFade;
-    slope += chop.yz * 0.055 * chopFade;
+    if (distanceSquared < 72.0 * 72.0) {
+        float chopFade = 1.0 - sqrt(distanceSquared) / 72.0;
+        vec3 chop = valueNoiseGradient(p * 0.42 + vec2(time * 0.18, -time * 0.14));
+        slope += chop.yz * 0.055 * chopFade;
+    }
     slope *= 1.0 + saturate(rainStrength) * 0.25;
 
     // Rain roughens the surface slightly. The normal's vertical axis is Y.

@@ -4,60 +4,91 @@ A small, original shader pack for **Minecraft Java 1.21.5** running **Iris 1.8.x
 **Sodium**, on a Fabric install.
 
 The target system is an Intel Core i3-5005U @ 2.00 GHz with Intel HD Graphics 5500 on
-Windows. The pack stays on a compact forward pipeline, one shadow map, a small cloud ray
+Linux Mint. The pack stays on a compact forward pipeline, one shadow map, a small cloud ray
 march and two full-screen passes. It has not been benchmarked on this hardware, so no FPS or
-performance guarantee is claimed; start with the POTATO preset and adjust from there.
+performance guarantee is claimed; start with DEFAULT for balanced visuals, POTATO for a lighter
+cloud/shadow workload, or PERFORMANCE when FPS matters more than dynamic shadows and FXAA.
 
 Version **0.11.0**. MIT licensed; third-party MIT adaptations are recorded in
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). It has not been GPU-tested or benchmarked.
+
+From **v0.10.4 onward**, Nova is distributed as one shader pack only. The published v0.10.2 and
+v0.10.3 releases retain their historical companion ZIPs, but no companion source, validation or
+packaging remains in this branch. All visual work is implemented inside the shader pack. Shader
+code can animate and shade vanilla geometry, but it cannot replace block models or change tree
+generation.
 
 ## What changed in 0.11.0
 
 An audit of the whole pipeline, with the defects it found fixed rather than documented.
 
-- **Leaf and log blocks were being sheared.** The wind offset was applied to every
-  vertex of every block on the vegetation list, and that list included leaves. A leaf
-  block is six full block faces, so its top edge moved sideways while its bottom edge
-  stayed: every leaf cube leaned in a different direction from its neighbours and a
-  canopy tore itself apart. Leaves and vines now sit on their own block ID (103) and
-  are never displaced in the vertex stage. Only the crossed-quad plants on ID 101 bend.
-- **Foliage has surface relief and real translucency.** A leaf face is one flat quad,
-  so vanilla light fills it with a single tone. Leaves and plants now tilt their
-  normal with a world-space noise gradient, and receive a chlorophyll-green backlight
-  term through the shaded side that is roughly three times the previous strength.
-  Trunks on ID 104 get a vertically stretched bark relief, which is what turns a
-  trunk from a flat slab into a rough cylinder.
-- **Shadows have a soft edge.** The filter was a fixed 2x2 grid of half-texel taps,
-  which can only ever return five levels of coverage and reads as a cut-out edge. It
-  is now an eight-tap golden-angle spiral whose radius grows with distance and with
-  the angle to the light, compared through a smoothstep band instead of a hard step.
-- **The colour buffer keeps its highlights.** `colortex0` was RGBA8 with the
-  half-float declaration commented out, so the sun disc, the moonlight, water glitter
-  and emissive blocks all clipped at 1.0 before the tonemapper. It is RGBA16F now,
-  which is also what makes the next item possible.
-- **Bloom.** Eight taps on two rings collect everything brighter than white and add it
-  back as a glow, so the sun is a disc with light around it instead of a flat white
-  coin. Default 0.30, and 0.0 removes the pass entirely.
-- **Clouds are lit from the inside.** Shading was a function of only height and
-  density, so a puff was one flat tone. The density field's own gradient along the
-  light direction now separates a lit face from a shaded flank, at no extra cost: the
-  gradient version of the value noise hashes exactly the same four corners.
-- **The cloud slab no longer ghosts itself.** With the camera above the deck looking
-  down, the entry point is behind the eye, and clamping it to zero marched the empty
-  air between the eye and the slab as if it were cloud. The intersection is solved
-  properly now and rejects both behind-camera and past-limit segments.
-- **Water reads as water at grazing angles.** The wave normal was faded by the view
-  incidence, which flattened exactly the angles where a real surface shows the most
-  detail and where the sun path lives. It fades with distance instead.
-- **Water geometry no longer opens shoreline gaps.** The displaced surface could rise
-  above the block top while the vertical faces stayed put, leaving a hairline of empty
-  space at every beach and pool edge. The wave is now biased so its crest sits exactly
-  on the water plane and every other point dips below it.
+- **Full cubes were being deformed by the plant hinge.** The sprite-midpoint hinge is correct
+  for a crossed quad, but it was being applied to anything on the vegetation list. On a leaf
+  block, which is six full faces, it moved the top of every face sideways: neighbouring cubes
+  leaned apart and a canopy tore itself open. Leaves and vines now have their own block ID (103)
+  and their own continuous world-space wind field, so vertices shared by adjoining leaf cubes
+  receive the same offset and the canopy stays welded. The hinge stays on ID 101, where the
+  geometry is a crossed quad.
+- **The `%minecraft:flowers` tag was the wrong one.** It also contains flowering azalea and
+  chorus flower, both full cubes, plus spore blossom and pink petals. The plant list now uses
+  `%minecraft:small_flowers`, and the checker rejects `%minecraft:flowers` on that ID.
+- **Foliage has surface relief and real translucency.** A leaf face is one flat quad, so
+  vanilla light fills it with a single tone. Leaves and plants now tilt their normal with a
+  world-space noise gradient and receive a chlorophyll backlight through the shaded side, warm
+  at sunset, that is roughly 2.5 times the previous strength. Trunks on ID 104 get a vertically
+  stretched bark relief, which is what turns a trunk from a flat slab into a rough cylinder.
+- **Shadows have a soft edge.** The filter was a fixed 2x2 grid of half-texel taps, which can
+  only ever return five levels of coverage and reads as a cut-out edge. It is now an eight-tap
+  golden-angle spiral whose radius grows with distance and with the angle to the light, compared
+  through a smoothstep band instead of a hard step.
+- **The colour buffer keeps its highlights.** `colortex0` was RGBA8 with the half-float
+  declaration commented out, so the sun disc, the moonlight, water glitter and emissive blocks
+  all clipped at 1.0 before the tonemapper. It is RGBA16F now, which is also what makes the next
+  item possible.
+- **Bloom.** Eight taps on two rings collect everything brighter than white and add it back as a
+  glow, so the sun is a disc with light around it instead of a flat white coin. Default 0.30, and
+  0.0 removes the pass entirely.
+- **Clouds are lit from the inside.** Shading was a function of only height and density, so a
+  puff was one flat tone. The density field's own gradient along the light direction now
+  separates a lit face from a shaded flank, at no extra cost: the gradient version of the value
+  noise hashes exactly the same four corners.
+- **The cloud slab no longer ghosts itself.** With the camera above the deck looking down, the
+  entry point is behind the eye, and clamping it to zero marched the empty air between the eye
+  and the slab as if it were cloud. The intersection now rejects behind-camera and past-limit
+  segments.
+- **Water reads as water at grazing angles.** The wave normal was faded by the view incidence,
+  which flattened exactly the angles where a real surface shows the most detail and where the
+  sun path lives. It fades with distance instead.
+- **Water geometry no longer opens shoreline gaps.** The displaced surface could rise above the
+  block top while the vertical faces stayed put, leaving a hairline of empty space at every beach
+  and pool edge. The wave is now biased so its crest sits exactly on the water plane and every
+  other point dips below it.
 
-These are source-level changes; nothing in this release was rendered or benchmarked.
-The two changes with the most risk are the eight-tap shadow spiral and the bloom pass:
-both cost texture bandwidth, and both need an in-game look before they can be called
-an improvement rather than a change.
+These are source-level changes; nothing in this release was rendered or benchmarked. The two
+changes with the most risk are the eight-tap shadow spiral and the bloom pass: both cost texture
+bandwidth, and both need an in-game look before they can be called an improvement.
+
+## What changed in 0.10.4
+
+- Future CI builds and releases contain only the Iris shader ZIP; companion source, validation
+  and packaging have been removed.
+- Leaf blocks received low-amplitude continuous vertex wind with slow canopy sway, subtle
+  per-vertex flutter, distance fade and matching shadow deformation, on their own material ID.
+- Ground plants kept their sprite-midpoint hinge, so leaf blocks and small plants no longer
+  share one deformation rule.
+- High-frequency water gradient-noise ripples are skipped beyond 72 blocks while the analytic
+  wave slope remains active.
+- The cloud detail-noise lookup is skipped when the horizon LOD has faded its contribution to
+  zero.
+
+## What changed in 0.10.2
+
+- **Clouds are larger, fewer and less uniform.** The procedural field is stretched and skewed, with a moderate near-view field scale (0.014) to break the overhead sky into separate broad masses, plus a restrained detail field (0.050) to roughen their edges. Both fade to a much broader field near the horizon, with no extra ray-march samples. The target is roughly 15–20 broad, irregular cloud masses in a typical overhead open-sky view, distributed across the whole sky rather than clustered at the horizon; the exact visible count varies with view direction and the coverage setting. The horizon LOD remains bounded for the four-step low-cost march.
+- **Water is less see-through.** Horizontal water now keeps at least 82% blend opacity, rising with depth, so the bottom remains visible through a tinted body instead of looking like clear glass. Vertical water faces retain their texture translucency.
+- **Foliage shading is less uniform.** Leaves and plants receive restrained warm/cool patch variation and a sunset-aware backlight while the original biome tint remains dominant. Grass-block top faces receive the same variation without moving the block geometry.
+- **Target defaults are lighter.** The default shadow map is reduced from 1024 to 512 and shadow distance from 96 to 64 blocks for the Intel HD 5500 target. The 1024 option remains available for sharper shadows. A new PERFORMANCE preset disables the actual Iris shadow render pass and FXAA, while keeping clouds and water enabled.
+
+These are source-level adjustments. Cloud count, water appearance, leaf motion and frame rate still require an in-game check on Linux Mint; no visual or FPS result is claimed. See [VISUAL-RESEARCH.md](VISUAL-RESEARCH.md) for the repository and license audit, and [TARGET-TEST-PLAN.md](TARGET-TEST-PLAN.md) for the repeatable HD 5500 visual/FPS comparison procedure.
 
 ## What changed in 0.10.1
 
@@ -215,23 +246,23 @@ normal out of two crossed sines. All three are visible mistakes, and all three a
 
 ## What works
 
-- **Lighting and shadows:** directional sunlight and moonlight, hemisphere ambient with a stronger sky/ground split, warm block light, and one shadow map with four filtered taps, bias and distance fades.
-- **Sky and clouds:** procedural day/night gradient, sunset band, sun and moon discs, plus a 60-block cloud slab marched in `CLOUD_STEPS` with front-to-back transmittance, analytic shading and a broad horizon LOD.
+- **Lighting and shadows:** directional sunlight and moonlight, hemisphere ambient with a stronger sky/ground split, warm block light, and one shadow map with eight spiral taps, a soft comparison band, bias and distance fades.
+- **Sky and clouds:** procedural day/night gradient, sunset band, sun and moon discs, plus a 60-block cloud slab marched in `CLOUD_STEPS` with front-to-back transmittance, analytic shading, gradient-driven directional shading and a broad horizon LOD.
 - **Fog:** altitude-sensitive height fog plus a distance term, coloured with a restrained air palette.
 - **Water:** Iris block ID 100 limits the shared world-space wave displacement, animated normals, Fresnel sky reflection, sun glint and depth absorption/in-scattering to water. The hand-water pass remains separate.
-- **Vegetation:** Iris block ID 101 selects leaves and plants for a continuous wind field, weighted by each vertex's position above its own sprite midpoint, so a plant bends from its base instead of sliding as a rigid block; the shadow pass applies the identical weight. Grass-block ID 102 receives subtle top-face tone variation only.
-- **Post-processing:** exposure, independent RGB gains, ACES tonemapping, saturation, contrast, underwater tint, FXAA, vignette and ordered dithering.
+- **Vegetation:** Iris block ID 101 gives ground plants a sprite-midpoint hinge so they lean from their base; ID 103 gives leaf blocks and vines a separate continuous world-space wind field so shared cube vertices stay welded; ID 104 adds bark relief to logs. ID 102 gives grass blocks top-face tone variation and relief only. The shadow pass applies the same displacement.
+- **Post-processing:** exposure, independent RGB gains, ACES tonemapping, saturation, contrast, underwater tint, two-ring bloom, FXAA, vignette and ordered dithering.
 - **Alpha coverage:** distance-faded Bayer coverage for terrain cutouts and shadows; other opaque programs keep the previous low cutoff, and translucent entities retain alpha for blending.
-- **Settings:** Color, Scene and Quality screens, with `DEFAULT` and `POTATO` presets.
+- **Settings:** Color, Scene and Quality screens, with `DEFAULT`, `POTATO` and `PERFORMANCE` presets.
 
-## What is deliberately not in 0.10.1
+## What is deliberately not in 0.11.0
 
 - Shader-only changes do not alter vanilla tree generation, branch layout, or grass-block density.
 - Screen-space terrain reflections in water.
 - Multiple-scattering clouds or cloud shadows on the ground.
 - Wet surfaces after rain.
 - PBR, LabPBR, parallax, POM or specular maps.
-- Dimension-specific skies, stars, moon phases, coloured shadows, SSAO, bloom or TAA.
+- Dimension-specific skies, stars, moon phases, coloured shadows, SSAO or TAA.
 - Vegetation selection prefers Iris block tags (`IRIS_TAG_SUPPORT`) and falls back to an explicit 1.21.5 block list, so sway does not depend on tag support.
 - The vanilla lightmap texture is not sampled; night vision and blindness are therefore not honoured.
 

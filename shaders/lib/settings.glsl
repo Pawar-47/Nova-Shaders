@@ -28,7 +28,7 @@
 #define FOG_DENSITY 1.0 // [0.0 0.5 0.75 1.0 1.25 1.5 2.0 3.0] Fog strength. 1.0 is already light haze; raise it for mist, 0.0 removes it.
 #define FOG_HEIGHT 64.0 // [0.0 32.0 48.0 64.0 80.0 96.0 128.0] Altitude at which the fog is thickest. It thins out above this.
 #define CLOUDS 1 // [0 1] Draw the procedural cloud sheet.
-#define CLOUD_COVERAGE 0.6 // [0.0 0.2 0.35 0.45 0.6 0.8 1.0] How much of the sky the clouds cover. Low values give small scattered puffs, high values a broken deck.
+#define CLOUD_COVERAGE 0.45 // [0.0 0.2 0.35 0.45 0.6 0.8 1.0] Cloud coverage. The default favours sparse, broad, irregular cloud masses.
 #define CLOUD_ALTITUDE 180.0 // [120.0 150.0 180.0 220.0 260.0] Height of the cloud sheet in blocks.
 #define WATER_WAVES 1 // [0 1] Animate the water surface normal.
 #define WATER_WAVE_HEIGHT 1.5 // [0.25 0.5 1.0 1.5 2.0] Strength of visible water displacement and normal waves.
@@ -39,7 +39,7 @@
 #define SHADOW_SOFTNESS 1.0 // [0.5 1.0 1.5 2.0 3.0] Spread of the four shadow lookup taps.
 #define CLOUD_STEPS 4 // [3 4 5 6 8] Steps the cloud ray march takes through the cloud slab. Higher is smoother and slower.
 
-const int shadowMapResolution = 1024; // [512 1024 2048] Shadow map size. 2048 is sharper and noticeably slower.
-const float shadowDistance = 96.0; // [48.0 64.0 96.0 128.0 160.0] How far from the camera shadows are drawn.
+const int shadowMapResolution = 512; // [512 1024 2048] Shadow map size. 512 is the target-hardware default; 1024 is sharper but slower.
+const float shadowDistance = 64.0; // [48.0 64.0 96.0 128.0 160.0] How far from the camera shadows are drawn.
 
 #endif

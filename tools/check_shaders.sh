@@ -130,10 +130,18 @@ if [ -f "$block_props" ]; then
         fi
     done
     # The wide flowers tag holds full cubes (flowering azalea, chorus flower), which
-    # must never reach the sheared ID 101.
+    # must never reach the hinge-deformed ID 101.
     if grep -qE "(^|[[:space:]])%minecraft:flowers([[:space:]]|$)" "$block_props"; then
         fail "shaders/block.properties: %minecraft:flowers includes full cubes; use %minecraft:small_flowers"
     fi
+    if ! grep -qE '^[[:space:]]*block\.103[[:space:]]*=[[:space:]]*%minecraft:leaves([[:space:]]|$)' "$block_props"; then
+        fail "shaders/block.properties: leaf block ID 103 must map %minecraft:leaves"
+    fi
+    for leaf in minecraft:oak_leaves minecraft:spruce_leaves minecraft:birch_leaves minecraft:jungle_leaves minecraft:acacia_leaves minecraft:dark_oak_leaves minecraft:mangrove_leaves minecraft:cherry_leaves minecraft:azalea_leaves minecraft:flowering_azalea_leaves minecraft:pale_oak_leaves; do
+        if ! grep -qF "$leaf" "$block_props"; then
+            fail "shaders/block.properties: leaf fallback mapping is missing $leaf"
+        fi
+    done
     for plant in minecraft:short_grass minecraft:tall_grass minecraft:fern minecraft:large_fern minecraft:dead_bush minecraft:seagrass minecraft:tall_seagrass; do
         if ! grep -qF "$plant" "$block_props"; then
             fail "shaders/block.properties: vegetation mapping is missing $plant"
@@ -166,8 +174,10 @@ if ! grep -qF 'mc_Entity.x == 100.0' "$shaders/lib/body/opaque.vsh"; then
     fail "water shader block ID does not match block.properties ID 100"
 fi
 if ! grep -qF 'mc_Entity.x == 101.0' "$shaders/lib/body/opaque.vsh" ||
-   ! grep -qF 'mc_Entity.x == 101.0' "$shaders/lib/body/shadow.vsh"; then
-    fail "vegetation shader block ID does not match block.properties ID 101 in both passes"
+   ! grep -qF 'mc_Entity.x == 101.0' "$shaders/lib/body/shadow.vsh" ||
+   ! grep -qF 'mc_Entity.x == 103.0' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'mc_Entity.x == 103.0' "$shaders/lib/body/shadow.vsh"; then
+    fail "plant and leaf shader block IDs must match block.properties in terrain and shadow passes"
 fi
 if ! grep -qF 'flat out float vWaterBlock;' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF 'flat in float vWaterBlock;' "$shaders/lib/body/water.fsh"; then
@@ -189,7 +199,11 @@ if ! grep -qF 'valueNoiseGradient(foliagePos.xz * 1.40' "$shaders/lib/body/opaqu
     fail "foliage needs normal relief and translucency backlighting to stop reading as flat cubes"
 fi
 if [ "$(grep -c 'mc_Entity.x == 101.0' "$shaders/lib/body/opaque.vsh")" -ne 1 ]; then
-    fail "opaque vertex stage must bend exactly the crossed-quad plant ID 101"
+    fail "opaque vertex stage must hinge exactly the crossed-quad plant ID 101"
+fi
+if ! grep -qF 'vec3 foliageTint = mix(vec3(0.96, 1.03, 0.94),' "$shaders/lib/body/opaque.fsh" ||
+   ! grep -qF 'vec3 transmissionTint = mix(vec3(0.10, 0.26, 0.06),' "$shaders/lib/body/opaque.fsh"; then
+    fail "foliage shading must preserve biome colour while adding subtle natural variation and backlight"
 fi
 if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/water.glsl" ||
@@ -198,12 +212,15 @@ if ! grep -qF '#include "/lib/water_waves.glsl"' "$shaders/lib/body/opaque.vsh" 
     fail "water vertex displacement and fragment slope must share the analytic wave field"
 fi
 if ! grep -qF 'vec2 novaVegetationOffset(vec3 worldPosition)' "$shaders/lib/vegetation.glsl" ||
+   ! grep -qF 'vec2 novaLeafOffset(vec3 worldPosition)' "$shaders/lib/vegetation.glsl" ||
+   ! grep -qF 'novaLeafOffset(worldPos)' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'novaLeafOffset(worldPos)' "$shaders/lib/body/shadow.vsh" ||
    ! grep -qF 'novaVegetationOffset(worldPos) * aboveMid' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF 'novaVegetationOffset(worldPos) * aboveMid' "$shaders/lib/body/shadow.vsh"; then
     fail "terrain and shadow passes must use the shared world-space vegetation field, weighted by sprite height"
 fi
-if ! grep -qF 'in vec4 mc_midTexCoord;' "$shaders/lib/body/opaque.vsh" ||
-   ! grep -qF 'in vec4 mc_midTexCoord;' "$shaders/lib/body/shadow.vsh" ||
+if ! grep -qF 'in vec2 mc_midTexCoord;' "$shaders/lib/body/opaque.vsh" ||
+   ! grep -qF 'in vec2 mc_midTexCoord;' "$shaders/lib/body/shadow.vsh" ||
    ! grep -qF 'smoothstep(mc_midTexCoord.y - 1.0e-4,' "$shaders/lib/body/opaque.vsh" ||
    ! grep -qF 'smoothstep(mc_midTexCoord.y - 1.0e-4,' "$shaders/lib/body/shadow.vsh"; then
     fail "vegetation sway must anchor vertices at the sprite base with mc_midTexCoord in both passes"
@@ -222,15 +239,49 @@ for entry in gbuffers_terrain.vsh gbuffers_terrain.fsh shadow.vsh; do
     fi
 done
 
+section "integrated GPU performance profile"
+
+if ! grep -qF '#if SHADOWS == 0' "$shaders/shaders.properties" ||
+   ! grep -qF 'shadow.enabled = false' "$shaders/shaders.properties" ||
+   ! grep -qF 'profile.PERFORMANCE =' "$shaders/shaders.properties" ||
+   ! grep -qF 'SHADOWS=0' "$shaders/shaders.properties" ||
+   ! grep -qF 'profile.PERFORMANCE=Performance' "$lang"; then
+    fail "PERFORMANCE profile must disable the Iris shadow pass and have a visible label"
+fi
+
+section "water opacity and cloud shape"
+
+if ! grep -qF 'if (distanceSquared < 72.0 * 72.0)' "$shaders/lib/water.glsl" ||
+   ! grep -qF 'valueNoiseGradient(p * 0.42' "$shaders/lib/water.glsl"; then
+    fail "high-frequency water noise must be evaluated only inside its 72-block distance range"
+fi
+if ! grep -qF 'float depthAlpha = max(0.82, novaWaterOpacity(thickness));' "$shaders/lib/body/water.fsh"; then
+    fail "horizontal water must retain a tinted translucent body instead of becoming clear"
+fi
+if ! grep -qF 'alpha = clamp(mix(albedo.a, depthAlpha, sheet), 0.0, 0.97);' "$shaders/lib/body/water.fsh"; then
+    fail "stronger water opacity must be restricted to horizontal sheets; vertical faces retain texture alpha"
+fi
+
 section "cloud horizon stability"
 
 sky="$shaders/lib/sky.glsl"
+if ! grep -qF 'float fieldScale = mix(0.0140, 0.0012, horizonLod);' "$sky" ||
+   ! grep -qF 'worldXZ.y * 0.78 - worldXZ.x * 0.11' "$sky"; then
+    fail "cloud field must use broad, asymmetric cloud masses across the sky"
+fi
+if ! grep -qF 'float horizonMass = valueNoise(horizonXZ * fieldScale + wind);' "$sky"; then
+    fail "horizon LOD must use the same asymmetric cloud domain as the main samples"
+fi
+if ! grep -qF 'if (horizonLod < 0.999)' "$sky" ||
+   ! grep -qF 'detail = valueNoise(horizonXZ * detailScale + wind);' "$sky"; then
+    fail "cloud detail noise must be skipped when the horizon LOD fades its contribution to zero"
+fi
+
 if ! grep -qF 'float horizonLod = smoothstep(30.0, 150.0, stepLength);' "$sky" ||
    ! grep -qF 'mass = mix(mass, horizonMass, horizonBlend);' "$sky"; then
     fail "cloud march does not blend to a stable low-frequency horizon field"
 fi
-if ! grep -qF 'float horizonMass = valueNoise(midPoint * fieldScale + wind);' "$sky" ||
-   ! grep -qF 'horizonMass, horizonLod, fieldShade);' "$sky"; then
+if ! grep -qF 'horizonMass, horizonLod, fieldShade);' "$sky"; then
     fail "cloud horizon density is not shared across the ray-march samples"
 fi
 if ! grep -qF 'float opticalDepthLimit = mix(8.0, 0.90, horizonLod);' "$sky" ||
@@ -256,7 +307,7 @@ if ! grep -qF 'const float NOVA_WATER_CREST' "$water_waves" ||
     fail "water displacement must stay at or below the block top, or every shoreline opens a gap"
 fi
 water_lib="$shaders/lib/water.glsl"
-if ! grep -qF 'float swellFade = mix(0.55, 1.0, 1.0 - saturate(viewDistance / 320.0));' "$water_lib"; then
+if ! grep -qF 'float swellFade = mix(0.55, 1.0, 1.0 - saturate(sqrt(distanceSquared) / 320.0));' "$water_lib"; then
     fail "water normals must fade with distance rather than with view incidence"
 fi
 if grep -qF 'tilted.xz *= incidence;' "$water_lib"; then
