@@ -35,8 +35,8 @@
 #define UNDERWATER_TINT 1 // [0 1] Tint the screen while the camera is under water.
 
 // ---------------------------------------------------------------- Quality ---
-#define SHADOWS 1 // [0 1] Shadow mapping with four filtered taps. 0 is the single biggest speed win.
-#define SHADOW_SOFTNESS 1.0 // [0.5 1.0 1.5 2.0 3.0] Spread of the four shadow lookup taps.
+#define SHADOWS 1 // [0 1] Shadow mapping with eight filtered taps. 0 is the single biggest speed win, and it also turns off Iris's shadow render pass.
+#define SHADOW_SOFTNESS 1.0 // [0.5 1.0 1.5 2.0 3.0] Spread of the eight shadow lookup taps. 1.0 is the default; higher is softer and blurrier.
 #define CLOUD_STEPS 4 // [3 4 5 6 8] Steps the cloud ray march takes through the cloud slab. Higher is smoother and slower.
 
 const int shadowMapResolution = 512; // [512 1024 2048] Shadow map size. 512 is the target-hardware default; 1024 is sharper but slower.

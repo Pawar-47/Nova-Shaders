@@ -53,9 +53,9 @@ option.UNDERWATER_TINT.comment=Tints and darkens the screen while the camera is 
 
 # ------------------------------------------------------------- Quality ------
 option.SHADOWS=Shadows
-option.SHADOWS.comment=Shadow mapping with four filtered taps. The single biggest speed win when off.
+option.SHADOWS.comment=Shadow mapping with eight filtered taps. The single biggest speed win when off; it also disables Iris's shadow render pass.
 option.SHADOW_SOFTNESS=Shadow softness
-option.SHADOW_SOFTNESS.comment=Spread of the four shadow lookup taps. 1.0 is a tight two by two filter.
+option.SHADOW_SOFTNESS.comment=Spread of the eight shadow lookup taps. 1.0 is a tight contact shadow; higher is softer and blurrier.
 option.shadowMapResolution=Shadow resolution
 option.shadowMapResolution.comment=Size of the shadow map. 512 is the HD 5500 default; 1024 and 2048 are sharper but slower.
 option.shadowDistance=Shadow distance
